@@ -7,7 +7,12 @@ import { Input } from 'src/components/ui/input';
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from 'src/components/ui/select';
-
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "src/components/ui/tooltip";
 import { Trash2, Plus } from 'lucide-react';
 import StatusBadge from 'src/components/shared/status-badges/StatusBadge';
 import { CAMPAIGN_STATUS_OPTIONS } from 'src/config/constant-data/campaignOptions';
@@ -151,15 +156,44 @@ const CampSegmentTable = ({
                     {segments.map((s, i) => (
                         <TableRow key={i}>
 
-                            <TableCell className='min-w-48'>
+                            <TableCell className="min-w-48">
+
                                 {isEditing ? (
-                                    <Input className='text-xs' value={s.title} onChange={(e) => handleChange(i, 'title', e.target.value)} />
+                                    <Input
+                                        className="text-xs"
+                                        value={s.title}
+                                        onChange={(e) =>
+                                            handleChange(i, "title", e.target.value)
+                                        }
+                                    />
                                 ) : (
                                     <>
-                                        <div>{s.title}</div>
-                                        <div className="text-xs text-primary">{s.segment_code}</div>
+                                        {s.title?.length > 50 ? (
+                                            <TooltipProvider delayDuration={200}>
+                                                <Tooltip>
+
+                                                    <TooltipTrigger asChild>
+                                                        <div className="truncate cursor-pointer max-w-[180px]">
+                                                            {s.title.slice(0, 50)}...
+                                                        </div>
+                                                    </TooltipTrigger>
+
+                                                    <TooltipContent>
+                                                        {s.title}
+                                                    </TooltipContent>
+
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        ) : (
+                                            <div>{s.title}</div>
+                                        )}
+
+                                        <div className="text-xs text-primary">
+                                            {s.segment_code}
+                                        </div>
                                     </>
                                 )}
+
                             </TableCell>
 
                             <TableCell>

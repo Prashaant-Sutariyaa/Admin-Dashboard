@@ -102,12 +102,12 @@ const ClientTable = ({
                     {client.code}
                   </TableCell>
 
-                  <TableCell className="text-center">
+                  <TableCell className="text-left">
                     {capitalizeFirst(client.name)}
                   </TableCell>
 
-                  <TableCell className="text-center">
-                    <div className="flex items-center gap-2 justify-center">
+                  <TableCell className="text-left">
+                    <div className="flex items-center gap-2 justify-start">
                       <div className="h-8 w-8 rounded-full bg-lightprimary text-primary flex items-center justify-center text-xs font-bold shrink-0">
                         {client.firstName.charAt(0).toUpperCase()}
                       </div>
