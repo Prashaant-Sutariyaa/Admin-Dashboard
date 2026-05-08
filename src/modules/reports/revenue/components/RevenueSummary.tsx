@@ -2,31 +2,21 @@ import { useEffect, useState } from "react";
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
 import { Download, Filter, RotateCcw } from "lucide-react";
-
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "src/components/ui/dialog";
 import { Button } from "src/components/ui/button";
-
 import { revenueService } from "../service/revenueService";
 import { toast } from "sonner";
-
-interface Props {
-    open: boolean;
-    onClose: () => void;
-}
+import { DateRange } from "react-day-picker";
+import DateRangePicker from "src/components/ui/DateRangePicker";
+import { toApiDate } from "src/utils/toApiDate";
 
 const getCssVar = (name: string) =>
     getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-const SummaryDialog = ({ open, onClose }: Props) => {
+const RevenueSummary = () => {
     const [loading, setLoading] = useState(false);
     const [downloading, setDownloading] = useState(false);
     const [data, setData] = useState<any[]>([]);
-
+    const [range, setRange] = useState<DateRange | undefined>();
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
 
@@ -40,17 +30,27 @@ const SummaryDialog = ({ open, onClose }: Props) => {
 
     // 🔥 Fetch
     const fetchSummary = async (customParams?: any) => {
+
         try {
             setLoading(true);
 
             const params = customParams ?? {};
+
             if (!customParams) {
-                if (startDate) params.start_date = startDate;
-                if (endDate) params.end_date = endDate;
+
+                if (range?.from) {
+                    params.from_date = toApiDate(range.from);
+                }
+
+                if (range?.to) {
+                    params.to_date = toApiDate(range.to);
+                }
             }
 
             const res = await revenueService.getSummary(params);
+
             setData(res || []);
+
         } catch {
             setData([]);
         } finally {
@@ -59,67 +59,110 @@ const SummaryDialog = ({ open, onClose }: Props) => {
     };
 
     useEffect(() => {
-        if (open) fetchSummary();
-    }, [open]);
+        fetchSummary();
+    }, []);
 
     // 🔥 Apply
     const handleApply = () => {
-        if (startDate && endDate && startDate > endDate) {
-            toast.error("Start date cannot be after end date");
+
+        if (
+            range?.from &&
+            range?.to &&
+            range.from > range.to
+        ) {
+            toast.error(
+                "Start date cannot be after end date"
+            );
+
             return;
         }
+
         fetchSummary();
     };
 
     // 🔥 Reset (clean)
     const handleReset = async () => {
-        setStartDate("");
-        setEndDate("");
 
-        await fetchSummary({}); // 🔥 force empty params
+        setRange(undefined);
+
+        await fetchSummary({});
     };
 
     // 🔥 Download
     const handleDownload = async () => {
+
         try {
             setDownloading(true);
 
             const params: any = {};
-            if (startDate) params.start_date = startDate;
-            if (endDate) params.end_date = endDate;
 
-            const res = await revenueService.downloadSummary(params);
+            if (range?.from) {
+                params.from_date = toApiDate(range.from);
+            }
+
+            if (range?.to) {
+                params.to_date = toApiDate(range.to);
+            }
+
+            const res =
+                await revenueService.downloadSummary(params);
 
             if (!res?.data) {
                 toast.info("No data available");
+
                 return;
             }
 
-            const blob = new Blob(["\uFEFF", res.data], {
-                type: "text/csv;charset=utf-8;",
-            });
+            const blob = new Blob(
+                ["\uFEFF", res.data],
+                {
+                    type: "text/csv;charset=utf-8;",
+                }
+            );
 
-            const url = window.URL.createObjectURL(blob);
+            const url =
+                window.URL.createObjectURL(blob);
 
-            const link = document.createElement("a");
+            const link =
+                document.createElement("a");
+
             link.href = url;
-            link.setAttribute("download", "revenue-summary.csv");
+
+            link.setAttribute(
+                "download",
+                "revenue-summary.csv"
+            );
 
             document.body.appendChild(link);
+
             link.click();
+
             link.remove();
+
             window.URL.revokeObjectURL(url);
 
             toast.success("Summary downloaded");
+
         } catch (e: any) {
-            toast.error(e?.message || "Download failed");
+
+            toast.error(
+                e?.message || "Download failed"
+            );
+
         } finally {
+
             setDownloading(false);
         }
     };
 
+    const formatMonth = (value: string) => {
+
+        const [month, year] = value.split("-");
+
+        return `${month.slice(0, 3)} ${year.slice(2)}`;
+    };
     // 🔥 Data
-    const months = data.map((d) => d.month);
+    const months = data.map((d) => formatMonth(d.month));
 
     const leadsSeries = [
         { name: "Booked", data: data.map((d) => d.booked_leads) },
@@ -221,99 +264,97 @@ const SummaryDialog = ({ open, onClose }: Props) => {
     };
 
     return (
-        <Dialog
-            open={open}
-            onOpenChange={(v) => {
-                if (!v) {
-                    setStartDate("");
-                    setEndDate("");
-                    setData([]);
-                    onClose();
-                }
-            }}
-        >
-            <DialogContent className="max-w-7xl">
+        <div className="space-y-5">
 
-                {/* HEADER */}
-                <DialogHeader className="px-6 py-4 border-b">
-                    <DialogTitle>Revenue Summary</DialogTitle>
-                </DialogHeader>
+            {/* FILTERS */}
+            <div className="flex flex-wrap gap-3 items-center rounded-xl border border-border bg-lightprimary/30 dark:bg-white/5 p-4">
 
-                {/* FILTERS */}
-                <div className="px-6 pt-4 flex gap-3 items-center">
-                    <input
-                        type="date"
-                        value={startDate}
-                        max={endDate || undefined}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="border rounded-md px-3 py-2 text-sm"
+                <div className="w-[320px]">
+
+                    <DateRangePicker
+                        value={range}
+                        onChange={setRange}
+                        placeholder="Select date range"
                     />
 
-                    <input
-                        type="date"
-                        value={endDate}
-                        min={startDate || undefined}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="border rounded-md px-3 py-2 text-sm"
-                    />
-
-                    <Button
-                        variant="lightprimary"
-                        onClick={handleApply}
-                        className="flex items-center gap-2"
-                    >
-                        <Filter size={16} />
-                        Apply
-                    </Button>
-
-                    <Button
-                        variant="lighterror"
-                        onClick={handleReset}
-                        disabled={!hasFilters}
-                        className="flex items-center gap-2"
-                    >
-                        <RotateCcw size={16} />
-                        Reset
-                    </Button>
-
-                    <Button
-                        variant="lightprimary"
-                        onClick={handleDownload}
-                        disabled={downloading || !hasData}
-                        className="ml-auto flex items-center gap-2"
-                    >
-                        <Download size={16} />
-                        {downloading ? "Downloading..." : "Download"}
-                    </Button>
                 </div>
 
-                {/* CONTENT */}
-                {loading ? (
-                    <div className="text-center py-20 text-muted-foreground">
-                        Loading...
-                    </div>
-                ) : data.length === 0 ? (
-                    <div className="text-center py-20 text-muted-foreground">
-                        No data available
-                    </div>
-                ) : (
-                    <div className="px-6 py-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <Button
+                    variant="lightprimary"
+                    onClick={handleApply}
+                    className="flex items-center gap-2"
+                >
+                    <Filter size={16} />
+                    Apply
+                </Button>
 
-                        <div className="rounded-xl border p-4">
-                            <p className="text-sm font-semibold mb-3">Leads</p>
-                            <Chart options={leadsOptions} series={leadsSeries} type="bar" height={260} />
-                        </div>
+                <Button
+                    variant="lighterror"
+                    onClick={handleReset}
+                    disabled={!hasFilters}
+                    className="flex items-center gap-2"
+                >
+                    <RotateCcw size={16} />
+                    Reset
+                </Button>
 
-                        <div className="rounded-xl border p-4">
-                            <p className="text-sm font-semibold mb-3">Revenue</p>
-                            <Chart options={revenueOptions} series={revenueSeries} type="area" height={260} />
-                        </div>
+                <Button
+                    variant="lightprimary"
+                    onClick={handleDownload}
+                    disabled={downloading || !hasData}
+                    className="ml-auto flex items-center gap-2"
+                >
+                    <Download size={16} />
+                    {downloading ? "Downloading..." : "Download"}
+                </Button>
 
+            </div>
+
+            {/* CONTENT */}
+            {loading ? (
+                <div className="text-center py-20 text-muted-foreground">
+                    Loading...
+                </div>
+            ) : data.length === 0 ? (
+                <div className="text-center py-20 text-muted-foreground border rounded-xl">
+                    No data available
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+
+                    {/* LEADS */}
+                    <div className="rounded-xl border border-border bg-background p-5">
+                        <p className="text-sm font-semibold mb-4">
+                            Leads Summary
+                        </p>
+
+                        <Chart
+                            options={leadsOptions}
+                            series={leadsSeries}
+                            type="bar"
+                            height={300}
+                        />
                     </div>
-                )}
-            </DialogContent>
-        </Dialog>
+
+                    {/* REVENUE */}
+                    <div className="rounded-xl border border-border bg-background p-5">
+                        <p className="text-sm font-semibold mb-4">
+                            Revenue Summary
+                        </p>
+
+                        <Chart
+                            options={revenueOptions}
+                            series={revenueSeries}
+                            type="area"
+                            height={300}
+                        />
+                    </div>
+
+                </div>
+            )}
+
+        </div>
     );
 };
 
-export default SummaryDialog;
+export default RevenueSummary;

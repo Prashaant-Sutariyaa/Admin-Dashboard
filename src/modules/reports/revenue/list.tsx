@@ -3,36 +3,45 @@ import { useEffect, useState } from "react";
 import SlimBreadcrumb from "src/components/shared/breadcrumb/SlimBreadcrumb";
 import CardBox from "src/components/shared/CardBox";
 
-import RevenueTable from "./components/table";
+import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from "src/components/ui/tabs";
+
 import RevenueFilters from "./components/filters";
-import Pagination from "./components/pagination";
+import RevenueTable from "./components/table";
+import RevenueSummary from "./components/RevenueSummary";
+
+import SharedPagination from "src/components/shared/pagination/SharedPagination";
 
 import { revenueService } from "./service/revenueService";
-import { campaignService } from "src/modules/campaigns/manageCampaigns/services/campaignService";
-import { toast } from "sonner";
-import SummaryDialog from "./components/SummaryDialog";
+
+import {
+    Table2,
+    BarChart3,
+    LayoutDashboard,
+} from "lucide-react";
+
+import { clientService } from "src/modules/clients/services/clientService";
+import SummaryTable from "./components/SummaryTable";
 
 const RevenueList = () => {
+
     const [data, setData] = useState<any[]>([]);
+    const [clients, setClients] = useState<any[]>([]);
+
     const [loading, setLoading] = useState(false);
-    const [summaryOpen, setSummaryOpen] = useState(false);
+    const [downloading, setDownloading] = useState(false);
+
+    // ✅ pagination
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(10);
     const [total, setTotal] = useState(0);
 
-    const [filters, setFilters] = useState<{
-        campaign_code?: string;
-        status?: string;
-        date?: string;
-    }>({});
-    const handleOpenSummary = () => {
-        setSummaryOpen(true);
-    };
-    const [downloading, setDownloading] = useState(false);
-
-    const [campaignOptions, setCampaignOptions] = useState<
-        { label: string; value: string }[]
-    >([]);
+    // ✅ filters
+    const [filters, setFilters] = useState<any>({});
 
     const BCrumb = [
         { to: "/", title: "Home" },
@@ -40,7 +49,7 @@ const RevenueList = () => {
         { title: "Revenue" },
     ];
 
-    // 🔥 Fetch revenue
+    // ✅ fetch revenue
     const fetchRevenue = async () => {
         try {
             setLoading(true);
@@ -62,23 +71,44 @@ const RevenueList = () => {
         }
     };
 
-    // 🔥 Apply filters
+    // ✅ load clients
+    const fetchClients = async () => {
+        try {
+            const res = await clientService.getAllClients();
+
+            setClients(
+                res.map((c: any) => ({
+                    label: `${c.name} (${c.code})`,
+                    value: String(c.id),
+                }))
+            );
+
+        } catch {
+            setClients([]);
+        }
+    };
+
+    // ✅ load
+    useEffect(() => {
+        fetchRevenue();
+    }, [page, limit, filters]);
+
+    useEffect(() => {
+        fetchClients();
+    }, []);
+
+    // ✅ apply filters
     const handleApply = (newFilters: any) => {
         setFilters(newFilters);
         setPage(1);
     };
 
-    // 🔥 Download
-    const handleDownload = async (filters: any) => {
+    // ✅ download
+    const handleDownload = async (downloadFilters: any) => {
         try {
             setDownloading(true);
 
-            const res = await revenueService.downloadRevenue(filters);
-
-            if (!res || !res.data) {
-                toast.info("No data available to download");
-                return;
-            }
+            const res = await revenueService.downloadRevenue(downloadFilters);
 
             const blob = new Blob(["\uFEFF", res.data], {
                 type: "text/csv;charset=utf-8;",
@@ -88,90 +118,88 @@ const RevenueList = () => {
 
             const link = document.createElement("a");
             link.href = url;
+
             link.setAttribute("download", "revenue-report.csv");
 
             document.body.appendChild(link);
+
             link.click();
 
             link.remove();
+
             window.URL.revokeObjectURL(url);
-
-            // ✅ SUCCESS
-            toast.success("Report downloaded successfully");
-
-        } catch (error: any) {
-            console.error("Download failed:", error);
-
-            // ❌ ERROR
-            toast.error(
-                error?.response?.data?.detail ||
-                error?.message ||
-                "Failed to download report"
-            );
 
         } finally {
             setDownloading(false);
         }
     };
 
-    // 🔥 Load campaigns (for multiselect)
-    useEffect(() => {
-        const loadCampaigns = async () => {
-            try {
-                const res = await campaignService.getCampaigns?.(); // or your campaignService
-                const mapped =
-                    res?.map((c: any) => ({
-                        label: `${c.code}`,
-                        value: c.code,
-                    })) || [];
-
-                setCampaignOptions(mapped);
-            } catch {
-                setCampaignOptions([]);
-            }
-        };
-
-        loadCampaigns();
-    }, []);
-
-    // 🔥 Fetch on change
-    useEffect(() => {
-        fetchRevenue();
-    }, [page, limit, filters]);
-
     return (
         <>
             <SlimBreadcrumb title="Revenue" items={BCrumb} />
 
-            <CardBox>
+            <Tabs defaultValue="summary" className="space-y-4">
 
-                <RevenueFilters
-                    onOpenSummary={handleOpenSummary}
-                    campaigns={campaignOptions}
-                    onApply={handleApply}
-                    onDownload={handleDownload}
-                    downloading={downloading}
-                    hasData={data.length > 0}
-                />
+                {/* TOP */}
+                <div className="flex items-center justify-between">
 
-                <RevenueTable data={data} loading={loading} />
+                    <TabsList className="h-11 rounded-lg border border-border bg-background p-1">
 
-                <Pagination
-                    page={page}
-                    limit={limit}
-                    total={total}
-                    onPageChange={(p) => setPage(p)}
-                    onLimitChange={(l) => {
-                        setLimit(l);
-                        setPage(1);
-                    }}
-                />
+                        <TabsTrigger value="summary" className="gap-2 px-4">
+                            <BarChart3 size={16} />
+                            Summary
+                        </TabsTrigger>
+                        <TabsTrigger value="monthly" className="gap-2 px-4" >
+                            <LayoutDashboard size={16} />
+                            Monthly
+                        </TabsTrigger>
+                        <TabsTrigger value="details" className="gap-2 px-4">
+                            <Table2 size={16} />
+                            Details
+                        </TabsTrigger>
+                    </TabsList>
 
-            </CardBox>
-            <SummaryDialog
-                open={summaryOpen}
-                onClose={() => setSummaryOpen(false)}
-            />
+                </div>
+
+                {/* SUMMARY */}
+                <TabsContent value="summary">
+                    <CardBox>
+                        <RevenueSummary />
+                    </CardBox>
+                </TabsContent>
+
+                {/* SUMMARY TABLE */}
+                <TabsContent value="monthly">
+                    <CardBox>
+                        <SummaryTable/>
+                    </CardBox>
+                </TabsContent>
+
+                {/* DETAILS */}
+                <TabsContent value="details">
+                    <CardBox className="space-y-4">
+                        <RevenueFilters
+                            clients={clients}
+                            onApply={handleApply}
+                            onDownload={handleDownload}
+                            downloading={downloading}
+                            hasData={data.length > 0}
+                        />
+                        <RevenueTable data={data} loading={loading} />
+                        <SharedPagination
+                            page={page}
+                            limit={limit}
+                            total={total}
+                            onPageChange={setPage}
+                            onLimitChange={(l) => {
+                                setLimit(l);
+                                setPage(1);
+                            }}
+                        />
+                    </CardBox>
+                </TabsContent>
+
+            </Tabs>
         </>
     );
 };

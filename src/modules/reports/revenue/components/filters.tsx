@@ -1,7 +1,5 @@
 import { useState } from "react";
 
-import MultiSelect from "src/components/ui/Multiselect";
-
 import {
     Select,
     SelectContent,
@@ -15,111 +13,130 @@ import { Button } from "src/components/ui/button";
 import {
     Download,
     Filter,
-    BarChart3,
     RotateCcw,
 } from "lucide-react";
 
+import { DateRange } from "react-day-picker";
+
 import { CAMPAIGN_STATUS_OPTIONS } from "src/config/constant-data/campaignOptions";
 
+import AutoComplete from "src/components/ui/AutoComplete";
+import DateRangePicker from "src/components/ui/DateRangePicker";
+import { toApiDate } from "src/utils/toApiDate";
+
 interface Props {
-    campaigns: { label: string; value: string }[];
+    clients: {
+        label: string;
+        value: string;
+    }[];
 
     onApply: (filters: {
-        campaign_code?: string;
+        client_id?: number;
         status?: string;
-        date?: string;
+        from_date?: string;
+        to_date?: string;
     }) => void;
 
-    onOpenSummary: () => void;
-
     onDownload: (filters: {
-        campaign_code?: string;
+        client_id?: number;
         status?: string;
-        date?: string;
+        from_date?: string;
+        to_date?: string;
     }) => void;
 
     downloading: boolean;
 
-    // ✅ from parent
     hasData: boolean;
 }
 
 const RevenueFilters = ({
-    campaigns,
+    clients,
     onApply,
     onDownload,
     downloading,
-    onOpenSummary,
     hasData,
 }: Props) => {
 
-    const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
     const [status, setStatus] = useState("all");
-    const [date, setDate] = useState("");
 
-    // ✅ detect filters
+    const [clientId, setClientId] = useState("all");
+
+    const [range, setRange] = useState<DateRange | undefined>();
+
+    // ✅ active filters
     const hasFilters =
-        selectedCampaigns.length > 0 ||
         status !== "all" ||
-        !!date;
+        clientId !== "all" ||
+        !!range?.from ||
+        !!range?.to;
 
     // ✅ apply
     const handleApply = () => {
+
         onApply({
-            campaign_code: selectedCampaigns.length
-                ? selectedCampaigns.join(",")
-                : undefined,
-
             status:
                 status !== "all"
                     ? status
                     : undefined,
 
-            date: date || undefined,
-        });
-    };
-
-    // ✅ download
-    const handleDownload = () => {
-        onDownload({
-            campaign_code: selectedCampaigns.length
-                ? selectedCampaigns.join(",")
-                : undefined,
-
-            status:
-                status !== "all"
-                    ? status
+            client_id:
+                clientId !== "all"
+                    ? Number(clientId)
                     : undefined,
 
-            date: date || undefined,
+            from_date: toApiDate(range?.from),
+            to_date: toApiDate(range?.to),
         });
     };
 
     // ✅ reset
     const handleReset = () => {
-        setSelectedCampaigns([]);
-        setStatus("all");
-        setDate("");
 
-        // reload all data
+        setStatus("all");
+
+        setClientId("all");
+
+        setRange(undefined);
+
         onApply({});
     };
 
+    // ✅ download
+    const handleDownload = () => {
+
+        onDownload({
+            status:
+                status !== "all"
+                    ? status
+                    : undefined,
+
+            client_id:
+                clientId !== "all"
+                    ? Number(clientId)
+                    : undefined,
+
+            from_date: toApiDate(range?.from),
+            to_date: toApiDate(range?.to),
+        });
+    };
+
     return (
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-lightprimary/30 dark:bg-white/5 p-4">
 
             {/* STATUS */}
             <Select
                 value={status}
                 onValueChange={setStatus}
             >
-                <SelectTrigger className="w-40">
+
+                <SelectTrigger className="w-44 bg-background">
                     <SelectValue placeholder="Status" />
                 </SelectTrigger>
 
                 <SelectContent>
+
                     <SelectItem value="all">
-                        All
+                        All Status
                     </SelectItem>
 
                     {CAMPAIGN_STATUS_OPTIONS.map((s) => (
@@ -130,26 +147,45 @@ const RevenueFilters = ({
                             {s.label}
                         </SelectItem>
                     ))}
+
                 </SelectContent>
+
             </Select>
 
-            {/* CAMPAIGNS */}
+            {/* CLIENT */}
             <div className="w-72">
-                <MultiSelect
-                    options={campaigns}
-                    value={selectedCampaigns}
-                    onChange={setSelectedCampaigns}
-                    placeholder="Select Campaign"
+
+                <AutoComplete
+                    options={[
+                        {
+                            label: "All Clients",
+                            value: "all",
+                        },
+
+                        ...clients,
+                    ]}
+
+                    value={clientId}
+
+                    onChange={(v) => {
+                        setClientId(v || "all");
+                    }}
+
+                    placeholder="Search client..."
                 />
+
             </div>
 
-            {/* DATE */}
-            <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="h-10 px-3 border border-input rounded-md bg-background"
-            />
+            {/* DATE RANGE */}
+            <div className="w-[320px]">
+
+                <DateRangePicker
+                    value={range}
+                    onChange={setRange}
+                    placeholder="Select date range"
+                />
+
+            </div>
 
             {/* ACTIONS */}
             <div className="ml-auto flex items-center gap-2">
@@ -189,17 +225,8 @@ const RevenueFilters = ({
                         : "Download"}
                 </Button>
 
-                {/* SUMMARY */}
-                <Button
-                    variant="lightprimary"
-                    onClick={onOpenSummary}
-                    className="flex items-center gap-2"
-                >
-                    <BarChart3 size={16} />
-                    Summary
-                </Button>
-
             </div>
+
         </div>
     );
 };
