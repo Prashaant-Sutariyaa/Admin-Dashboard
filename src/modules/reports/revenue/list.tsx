@@ -26,12 +26,13 @@ import {
 
 import { clientService } from "src/modules/clients/services/clientService";
 import SummaryTable from "./components/SummaryTable";
+import RevenueStats from "./components/RevenueStats";
 
 const RevenueList = () => {
 
     const [data, setData] = useState<any[]>([]);
     const [clients, setClients] = useState<any[]>([]);
-
+    const [stats, setStats] = useState<any>();
     const [loading, setLoading] = useState(false);
     const [downloading, setDownloading] = useState(false);
 
@@ -59,6 +60,10 @@ const RevenueList = () => {
                 page,
                 limit,
             });
+            const statsRes =
+                await revenueService.getRevenueStats(filters);
+
+            setStats(statsRes || {});
 
             setData(res.data || []);
             setTotal(res.total || 0);
@@ -66,6 +71,7 @@ const RevenueList = () => {
         } catch {
             setData([]);
             setTotal(0);
+            setStats({});
         } finally {
             setLoading(false);
         }
@@ -78,7 +84,7 @@ const RevenueList = () => {
 
             setClients(
                 res.map((c: any) => ({
-                    label: `${c.name} (${c.code})`,
+                    label: `${c.code} - ${c.name}`,
                     value: String(c.id),
                 }))
             );
@@ -171,7 +177,7 @@ const RevenueList = () => {
                 {/* SUMMARY TABLE */}
                 <TabsContent value="monthly">
                     <CardBox>
-                        <SummaryTable/>
+                        <SummaryTable />
                     </CardBox>
                 </TabsContent>
 
@@ -184,6 +190,10 @@ const RevenueList = () => {
                             onDownload={handleDownload}
                             downloading={downloading}
                             hasData={data.length > 0}
+                        />
+                        <RevenueStats
+                            data={stats}
+                            loading={loading}
                         />
                         <RevenueTable data={data} loading={loading} />
                         <SharedPagination

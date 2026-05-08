@@ -26,4 +26,9 @@ export const revenueService = {
         });
         return res;
     },
+
+    async getRevenueStats(params?: any) {
+        const res = await apiClient.get("/revenue/stats", { params });
+        return res.data;
+    },
 };

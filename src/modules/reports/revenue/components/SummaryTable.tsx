@@ -1,196 +1,369 @@
 import { useEffect, useState } from "react";
 
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "src/components/ui/table";
+
+import { toast } from "sonner";
+
+import { DateRange } from "react-day-picker";
 
 import { revenueService } from "../service/revenueService";
 
 import { formatCurrencyNumber } from "src/utils/formatCurrencyNumber";
 
+import { toApiDate } from "src/utils/toApiDate";
+
+import SummaryFilters from "./summaryFilters";
+import RevenueStats from "./RevenueStats";
+
 const SummaryTable = () => {
 
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
 
-  // ✅ fetch
-  const fetchSummary = async (customParams?: any) => {
-    try {
-      setLoading(true);
+    const [downloading, setDownloading] = useState(false);
 
-      const res = await revenueService.getSummary(customParams);
+    const [data, setData] = useState<any[]>([]);
+const [stats, setStats] = useState<any>();
+    const [range, setRange] =
+        useState<DateRange | undefined>();
 
-      setData(res || []);
+    // ✅ helpers
+    const hasFilters =
+        !!range?.from ||
+        !!range?.to;
 
-    } catch {
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const hasData =
+        data.length > 0;
 
-  useEffect(() => {
-    fetchSummary();
-  }, []);
+    // ✅ fetch
+    const fetchSummary = async (
+        customParams?: any
+    ) => {
 
+        try {
 
-  return (
-    <div className="rounded-xl border border-border overflow-hidden">
+            setLoading(true);
 
-      <Table>
+            const params =
+                customParams ?? {};
 
-        <TableHeader>
+            if (!customParams) {
 
-          <TableRow>
+                if (range?.from) {
+                    params.from_date =
+                        toApiDate(range.from);
+                }
 
-            <TableHead>Month</TableHead>
+                if (range?.to) {
+                    params.to_date =
+                        toApiDate(range.to);
+                }
+            }
 
-            <TableHead className="text-right">
-              Booked Leads
-            </TableHead>
+            const res =
+                await revenueService.getSummary(params);
 
-            <TableHead className="text-right">
-              Accepted Leads
-            </TableHead>
+                const statsRes =
+    await revenueService.getRevenueStats(params);
 
-            <TableHead className="text-right">
-              Deficit Leads
-            </TableHead>
+setStats(statsRes || {});
 
-            <TableHead className="text-right">
-              Booked Revenue
-            </TableHead>
+            setData(res || []);
 
-            <TableHead className="text-right">
-              Accepted Revenue
-            </TableHead>
+        } catch {
 
-            <TableHead className="text-right">
-              Pending Revenue
-            </TableHead>
+            setData([]);
+setStats({});
 
-          </TableRow>
+        } finally {
 
-        </TableHeader>
+            setLoading(false);
+        }
+    };
 
-        <TableBody>
+    useEffect(() => {
+        fetchSummary();
+    }, []);
 
-          {loading ? (
-            <TableRow>
-              <TableCell
-                colSpan={7}
-                className="text-center py-10 text-muted-foreground"
-              >
-                Loading...
-              </TableCell>
-            </TableRow>
-          ) : data.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={7}
-                className="text-center py-10 text-muted-foreground"
-              >
-                No data available
-              </TableCell>
-            </TableRow>
-          ) : (
-           data.map((r, index) => (
+    // ✅ apply
+    const handleApply = () => {
+        fetchSummary();
+    };
 
-  <TableRow
-    key={index}
-    className="even:bg-lightprimary/40"
-  >
+    // ✅ reset
+    const handleReset = async () => {
 
-    {/* MONTH */}
-    <TableCell className="font-medium whitespace-nowrap min-w-40">
-      {r.month}
-    </TableCell>
+        setRange(undefined);
 
-    {/* BOOKED LEADS */}
-    <TableCell className="text-right">
+        await fetchSummary({});
+    };
 
-      <div className="font-semibold text-warningstrong tabular-nums">
-        {formatCurrencyNumber(r.booked_leads)}
-      </div>
+    // ✅ download
+    const handleDownload = async () => {
 
-    </TableCell>
+        try {
 
-    {/* ACCEPTED LEADS */}
-    <TableCell className="text-right">
+            setDownloading(true);
 
-      <div className="flex items-center justify-end gap-2">
+            const params: any = {};
 
-        <span className="font-semibold text-successemphasis tabular-nums">
-          {formatCurrencyNumber(r.accepted_leads?.value)}
-        </span>
+            if (range?.from) {
+                params.from_date =
+                    toApiDate(range.from);
+            }
 
-        <span className="text-xs text-muted-foreground">
-          ({r.accepted_leads?.percentage})
-        </span>
+            if (range?.to) {
+                params.to_date =
+                    toApiDate(range.to);
+            }
 
-      </div>
+            const res =
+                await revenueService.downloadSummary(params);
 
-    </TableCell>
+            if (!res?.data) {
 
-    {/* DEFICIT LEADS */}
-    <TableCell className="text-right">
+                toast.info(
+                    "No data available"
+                );
 
-      <div className="flex items-center justify-end gap-2">
+                return;
+            }
 
-        <span className="font-semibold text-erroremphasis tabular-nums">
-          {formatCurrencyNumber(r.deficit_leads?.value)}
-        </span>
+            const blob = new Blob(
+                ["\uFEFF", res.data],
+                {
+                    type: "text/csv;charset=utf-8;",
+                }
+            );
 
-        <span className="text-xs text-muted-foreground">
-          ({r.deficit_leads?.percentage})
-        </span>
+            const url =
+                window.URL.createObjectURL(blob);
 
-      </div>
+            const link =
+                document.createElement("a");
 
-    </TableCell>
+            link.href = url;
 
-    {/* BOOKED REVENUE */}
-    <TableCell className="text-right">
+            link.setAttribute(
+                "download",
+                "revenue-summary-table.csv"
+            );
 
-      <div className="font-semibold text-warningstrong tabular-nums">
-        $ {formatCurrencyNumber(r.booked_revenue)}
-      </div>
+            document.body.appendChild(link);
 
-    </TableCell>
+            link.click();
 
-    {/* ACCEPTED REVENUE */}
-    <TableCell className="text-right">
+            link.remove();
 
-      <div className="font-semibold text-successemphasis tabular-nums">
-        $ {formatCurrencyNumber(r.accepted_revenue)}
-      </div>
+            window.URL.revokeObjectURL(url);
 
-    </TableCell>
+            toast.success(
+                "Summary table downloaded"
+            );
 
-    {/* PENDING REVENUE */}
-    <TableCell className="text-right">
+        } catch (e: any) {
 
-      <div className="font-semibold text-erroremphasis tabular-nums">
-        $ {formatCurrencyNumber(r.revenue_pending)}
-      </div>
+            toast.error(
+                e?.message ||
+                "Download failed"
+            );
 
-    </TableCell>
+        } finally {
 
-  </TableRow>
-))
-          )}
+            setDownloading(false);
+        }
+    };
 
-        </TableBody>
+    return (
+        <div className="space-y-5">
 
-      </Table>
+            {/* FILTERS */}
+            <SummaryFilters
+                range={range}
+                setRange={setRange}
+                onApply={handleApply}
+                onReset={handleReset}
+                onDownload={handleDownload}
+                downloading={downloading}
+                hasFilters={hasFilters}
+                hasData={hasData}
+            />
+            <RevenueStats
+    data={stats}
+    loading={loading}
+/>
 
-    </div>
-  );
+            {/* TABLE */}
+            <div className="rounded-xl border border-border overflow-hidden">
+
+                <Table>
+
+                    <TableHeader>
+
+                        <TableRow>
+
+                            <TableHead>
+                                Month
+                            </TableHead>
+
+                            <TableHead className="text-right">
+                                Booked Leads
+                            </TableHead>
+
+                            <TableHead className="text-right">
+                                Accepted Leads
+                            </TableHead>
+
+                            <TableHead className="text-right">
+                                Deficit Leads
+                            </TableHead>
+
+                            <TableHead className="text-right">
+                                Booked Revenue
+                            </TableHead>
+
+                            <TableHead className="text-right">
+                                Accepted Revenue
+                            </TableHead>
+
+                            <TableHead className="text-right">
+                                Pending Revenue
+                            </TableHead>
+
+                        </TableRow>
+
+                    </TableHeader>
+
+                    <TableBody>
+
+                        {loading ? (
+
+                            <TableRow>
+
+                                <TableCell
+                                    colSpan={7}
+                                    className="text-center py-10 text-muted-foreground"
+                                >
+                                    Loading...
+                                </TableCell>
+
+                            </TableRow>
+
+                        ) : data.length === 0 ? (
+
+                            <TableRow>
+
+                                <TableCell
+                                    colSpan={7}
+                                    className="text-center py-10 text-muted-foreground"
+                                >
+                                    No data available
+                                </TableCell>
+
+                            </TableRow>
+
+                        ) : (
+
+                            data.map((r, index) => (
+
+                                <TableRow
+                                    key={index}
+                                    className="even:bg-lightprimary/40"
+                                >
+
+                                    {/* MONTH */}
+                                    <TableCell className="font-medium whitespace-nowrap min-w-40">
+                                        {r.month}
+                                    </TableCell>
+
+                                    {/* BOOKED LEADS */}
+                                    <TableCell className="text-right">
+
+                                        <div className="font-semibold text-warningstrong tabular-nums">
+                                            {formatCurrencyNumber(r.booked_leads)}
+                                        </div>
+
+                                    </TableCell>
+
+                                    {/* ACCEPTED LEADS */}
+                                    <TableCell className="text-right">
+
+                                        <div className="flex items-center justify-end gap-2">
+
+                                            <span className="font-semibold text-successemphasis tabular-nums">
+                                                {formatCurrencyNumber(r.accepted_leads?.value)}
+                                            </span>
+
+                                            <span className="text-xs text-muted-foreground">
+                                                ({r.accepted_leads?.percentage})
+                                            </span>
+
+                                        </div>
+
+                                    </TableCell>
+
+                                    {/* DEFICIT LEADS */}
+                                    <TableCell className="text-right">
+
+                                        <div className="flex items-center justify-end gap-2">
+
+                                            <span className="font-semibold text-erroremphasis tabular-nums">
+                                                {formatCurrencyNumber(r.deficit_leads?.value)}
+                                            </span>
+
+                                            <span className="text-xs text-muted-foreground">
+                                                ({r.deficit_leads?.percentage})
+                                            </span>
+
+                                        </div>
+
+                                    </TableCell>
+
+                                    {/* BOOKED REVENUE */}
+                                    <TableCell className="text-right">
+
+                                        <div className="font-semibold text-warningstrong tabular-nums">
+                                            $ {formatCurrencyNumber(r.booked_revenue)}
+                                        </div>
+
+                                    </TableCell>
+
+                                    {/* ACCEPTED REVENUE */}
+                                    <TableCell className="text-right">
+
+                                        <div className="font-semibold text-successemphasis tabular-nums">
+                                            $ {formatCurrencyNumber(r.accepted_revenue)}
+                                        </div>
+
+                                    </TableCell>
+
+                                    {/* PENDING REVENUE */}
+                                    <TableCell className="text-right">
+
+                                        <div className="font-semibold text-erroremphasis tabular-nums">
+                                            $ {formatCurrencyNumber(r.revenue_pending)}
+                                        </div>
+
+                                    </TableCell>
+
+                                </TableRow>
+                            ))
+                        )}
+
+                    </TableBody>
+
+                </Table>
+
+            </div>
+
+        </div>
+    );
 };
 
 export default SummaryTable;

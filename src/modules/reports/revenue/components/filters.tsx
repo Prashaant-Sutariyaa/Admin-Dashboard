@@ -20,9 +20,9 @@ import { DateRange } from "react-day-picker";
 
 import { CAMPAIGN_STATUS_OPTIONS } from "src/config/constant-data/campaignOptions";
 
-import AutoComplete from "src/components/ui/AutoComplete";
 import DateRangePicker from "src/components/ui/DateRangePicker";
 import { toApiDate } from "src/utils/toApiDate";
+import MultiSelect from "src/components/ui/Multiselect";
 
 interface Props {
     clients: {
@@ -31,14 +31,14 @@ interface Props {
     }[];
 
     onApply: (filters: {
-        client_id?: number;
+        client_id?: string;
         status?: string;
         from_date?: string;
         to_date?: string;
     }) => void;
 
     onDownload: (filters: {
-        client_id?: number;
+        client_id?: string;
         status?: string;
         from_date?: string;
         to_date?: string;
@@ -59,14 +59,14 @@ const RevenueFilters = ({
 
     const [status, setStatus] = useState("all");
 
-    const [clientId, setClientId] = useState("all");
+    const [clientIds, setClientIds] = useState<string[]>([]);
 
     const [range, setRange] = useState<DateRange | undefined>();
 
     // ✅ active filters
     const hasFilters =
         status !== "all" ||
-        clientId !== "all" ||
+        clientIds.length > 0 ||
         !!range?.from ||
         !!range?.to;
 
@@ -80,8 +80,8 @@ const RevenueFilters = ({
                     : undefined,
 
             client_id:
-                clientId !== "all"
-                    ? Number(clientId)
+                clientIds.length
+                    ? clientIds.join(",")
                     : undefined,
 
             from_date: toApiDate(range?.from),
@@ -94,7 +94,7 @@ const RevenueFilters = ({
 
         setStatus("all");
 
-        setClientId("all");
+        setClientIds([]);
 
         setRange(undefined);
 
@@ -111,8 +111,8 @@ const RevenueFilters = ({
                     : undefined,
 
             client_id:
-                clientId !== "all"
-                    ? Number(clientId)
+                clientIds.length
+                    ? clientIds.join(",")
                     : undefined,
 
             from_date: toApiDate(range?.from),
@@ -155,23 +155,12 @@ const RevenueFilters = ({
             {/* CLIENT */}
             <div className="w-72">
 
-                <AutoComplete
-                    options={[
-                        {
-                            label: "All Clients",
-                            value: "all",
-                        },
-
-                        ...clients,
-                    ]}
-
-                    value={clientId}
-
-                    onChange={(v) => {
-                        setClientId(v || "all");
-                    }}
-
-                    placeholder="Search client..."
+                <MultiSelect
+                    options={clients}
+                    value={clientIds}
+                    onChange={setClientIds}
+                    placeholder="Select clients"
+                    maxDisplay={2}
                 />
 
             </div>
