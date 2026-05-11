@@ -1,260 +1,215 @@
-import { useState, useMemo } from 'react';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from 'src/components/ui/table';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from 'src/components/ui/select';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from 'src/components/ui/tooltip';
-import { Input } from 'src/components/ui/input';
-import { Button } from 'src/components/ui/button';
-import { Icon } from '@iconify/react';
-import CardBox from 'src/components/shared/CardBox';
-import { sentinelBatchesData, SentinelBatch } from '../types-data/sentinelBatches';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "src/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "src/components/ui/tooltip";
 
-const tableHeadings = [
-    { key: 'segmentId', label: 'Segment ID', sticky: true },
-    { key: 'title', label: 'Title', sticky: true },
-    { key: 'dataOpsTotal', label: 'DataOps Total', sticky: false },
-    { key: 'dataOpsValid', label: 'DataOps Valid', sticky: false },
-    { key: 'dataOpsInvalid', label: 'DataOps Invalid', sticky: false },
-    { key: 'emailTotal', label: 'Email Total', sticky: false },
-    { key: 'emailPending', label: 'Email Pending', sticky: false },
-    { key: 'emailValid', label: 'Email Valid', sticky: false },
-    { key: 'emailInvalid', label: 'Email Invalid', sticky: false },
-    { key: 'qualityTotal', label: 'Quality Total', sticky: false },
-    { key: 'qualityPending', label: 'Quality Pending', sticky: false },
-    { key: 'qualityValid', label: 'Quality Valid', sticky: false },
-    { key: 'qualityInvalid', label: 'Quality Invalid', sticky: false },
-    { key: 'dbRefreshTotal', label: 'DB-Refresh Total', sticky: false },
-    { key: 'dbRefreshPending', label: 'DB-Refresh Pending', sticky: false },
-    { key: 'dbRefreshValid', label: 'DB-Refresh Valid', sticky: false },
-    { key: 'dbRefreshInvalid', label: 'DB-Refresh Invalid', sticky: false },
-    { key: 'vvTotal', label: 'V V Total', sticky: false },
-    { key: 'vvPending', label: 'V V Pending', sticky: false },
-    { key: 'vvValid', label: 'V V Valid', sticky: false },
-    { key: 'vvInvalid', label: 'V V Invalid', sticky: false },
-    { key: 'misTotal', label: 'MIS Total', sticky: false },
-    { key: 'misPending', label: 'MIS Pending', sticky: false },
-    { key: 'misDelivered', label: 'MIS Delivered', sticky: false },
-    { key: 'misAccepted', label: 'MIS Accepted', sticky: false },
-    { key: 'misClientRejected', label: 'MIS Client Rejected', sticky: false },
-    { key: 'misRTD', label: 'MIS RTD', sticky: false },
-    { key: 'misInternalRejected', label: 'MIS Internal Rejected', sticky: false },
-];
+import { SentinelBatch } from "../services/SentinelBatchesService";
+import { Link } from "react-router";
 
-const pageSizeOptions = [10, 20, 50, 100];
-const TITLE_TRUNCATE = 30;
+interface Props {
+    data: SentinelBatch[];
+    loading: boolean;
+}
 
-// Sticky left offset per column index
-const stickyOffset = (index: number) => {
-    if (index === 0) return 'left-0';
-    if (index === 1) return 'left-[200px]';
-    return '';
+const SEGMENT_WIDTH = 230;
+const TITLE_WIDTH = 300;
+const TITLE_LEFT = SEGMENT_WIDTH;
+
+const GROUP = {
+    dataops: { headerBg: "bg-lightprimary", bodyBg: "bg-lightprimary/30", text: "text-primary", border: "border-primary/30" },
+    email: { headerBg: "bg-lightinfo", bodyBg: "bg-lightinfo/30", text: "text-info", border: "border-info/30" },
+    quality: { headerBg: "bg-lightsuccess", bodyBg: "bg-lightsuccess/30", text: "text-success", border: "border-success/30" },
+    dbr: { headerBg: "bg-lightprimary", bodyBg: "bg-lightprimary/30", text: "text-primary", border: "border-primary/30" },
+    vv: { headerBg: "bg-lightsecondary", bodyBg: "bg-lightsecondary/30", text: "text-secondary", border: "border-secondary/30" },
+    mis: { headerBg: "bg-lightinfo", bodyBg: "bg-lightinfo/30", text: "text-info", border: "border-info/30" },
 };
 
-// Even row bg for sticky cells — solid so content doesn't bleed through
-const stickyEvenBg = 'even:bg-lightprimary/80';
+const GroupHead = ({ label, colSpan, group }: { label: string; colSpan: number; group: keyof typeof GROUP }) => (
+    <TableHead colSpan={colSpan} className={`text-center font-semibold text-xs uppercase tracking-wide border-l-2 border-r border-b-2 ${GROUP[group].headerBg} ${GROUP[group].border}`}>
+        {label}
+    </TableHead>
+);
 
-const SentinelBatchesTable = () => {
-    const [search, setSearch] = useState('');
-    const [pageSize, setPageSize] = useState(10);
-    const [page, setPage] = useState(1);
+const SubHead = ({ label, isFirst = false, group }: { label: string; isFirst?: boolean; group: keyof typeof GROUP }) => (
+    <TableHead className={`text-center text-xs whitespace-nowrap border-b-2 border-r ${GROUP[group].headerBg} ${GROUP[group].border} ${isFirst ? `border-l-2 ${GROUP[group].border}` : ""}`}>
+        {label}
+    </TableHead>
+);
 
-    const filtered = useMemo(() => {
-        if (!search.trim()) return sentinelBatchesData;
-        return sentinelBatchesData.filter((item) =>
-            item.title.toLowerCase().includes(search.toLowerCase()),
-        );
-    }, [search]);
+const GCell = ({ children, isFirst = false, group, className = "" }: { children: React.ReactNode; isFirst?: boolean; group: keyof typeof GROUP; className?: string }) => (
+    <TableCell className={`text-center border-b border-r ${GROUP[group].bodyBg} ${GROUP[group].border} ${isFirst ? `border-l-2 ${GROUP[group].border}` : ""} ${className}`}>
+        {children}
+    </TableCell>
+);
 
-    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-    const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+// ✅ Sticky cell styles as inline — Tailwind z-* gets overridden by stacking context
+const stickySegment: React.CSSProperties = {
+    position: "sticky",
+    left: 0,
+    width: `${SEGMENT_WIDTH}px`,
+    minWidth: `${SEGMENT_WIDTH}px`,
+    zIndex: 20,          // ✅ inline z — wins over everything
+};
 
-    const handleSearch = (val: string) => { setSearch(val); setPage(1); };
-    const handlePageSize = (val: string) => { setPageSize(Number(val)); setPage(1); };
+const stickyTitle: React.CSSProperties = {
+    position: "sticky",
+    left: `${TITLE_LEFT}px`,
+    width: `${TITLE_WIDTH}px`,
+    minWidth: `${TITLE_WIDTH}px`,
+    maxWidth: `${TITLE_WIDTH}px`,
+    zIndex: 20,          // ✅ inline z — wins over everything
+};
 
-    const renderCell = (item: SentinelBatch, key: string) => {
-        const value = item[key as keyof SentinelBatch];
-        if (value === null || value === undefined) return '';
-        return String(value);
-    };
+// Lower z for body rows so header rows always win
+const stickySegmentBody: React.CSSProperties = { ...stickySegment, zIndex: 20 };
+const stickyTitleBody: React.CSSProperties = { ...stickyTitle, zIndex: 20 };
 
+const SentinelBatchesTable = ({ data, loading }: Props) => {
     return (
-        <TooltipProvider delayDuration={200}>
-            <CardBox>
+        <div className="overflow-x-auto border border-border rounded-md" style={{ position: "relative" }}>
+            <Table style={{ minWidth: "2600px", borderCollapse: "separate", borderSpacing: 0 }}>
 
-                {/* ── Controls ── */}
-                <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">Show entries</span>
-                        <Select value={String(pageSize)} onValueChange={handlePageSize}>
-                            <SelectTrigger className="w-20">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {pageSizeOptions.map((size) => (
-                                    <SelectItem key={size} value={String(size)}>{size}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                <TableHeader>
 
-                    <div className="relative">
-                        <Icon
-                            icon="solar:magnifer-linear"
-                            width={16}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                        />
-                        <Input
-                            type="text"
-                            placeholder="Search by title..."
-                            value={search}
-                            onChange={(e) => handleSearch(e.target.value)}
-                            className="pl-9 w-64"
-                        />
-                    </div>
-                </div>
+                    {/* ── ROW 1 — group labels ── */}
+                    <TableRow>
 
-                {/* ── Table ── */}
-                <div className="border border-border rounded-md">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                {tableHeadings.map((col, index) => (
-                                    <TableHead
-                                        key={col.key}
-                                        className={`
-                      text-xs font-semibold whitespace-nowrap
-                      border-r border-border last:border-r-0
-                      ${col.sticky
-                                                ? `sticky ${stickyOffset(index)} z-20 bg-muted`
-                                                : ''
-                                            }
-                      ${index === 0 ? 'min-w-[200px]' : ''}
-                      ${index === 1 ? 'min-w-[250px]' : 'min-w-[110px]'}
-                    `}
-                                    >
-                                        {col.label}
-                                    </TableHead>
-                                ))}
-                            </TableRow>
-                        </TableHeader>
+                        {/* ✅ NO rowSpan — rendered in BOTH rows to avoid stacking context issues */}
+                        {/* Row 1 segment cell — full height via rowSpan removed, use 2 cells instead */}
+                        <TableHead rowSpan={2} className="text-center font-semibold border-b-2 border-r-2 border-border bg-muted" style={stickySegment}>
+                            Segment Code
+                        </TableHead>
 
-                        <TableBody>
-                            {paginated.length === 0 ? (
-                                <TableRow>
+                        <TableHead rowSpan={2} className="text-center font-semibold border-b-2 border-r-2 border-border bg-muted" style={stickyTitle}>
+                            Title
+                        </TableHead>
+
+                        <GroupHead label="DataOps" colSpan={3} group="dataops" />
+                        <GroupHead label="Email" colSpan={4} group="email" />
+                        <GroupHead label="Quality" colSpan={4} group="quality" />
+                        <GroupHead label="DB Refresh" colSpan={4} group="dbr" />
+                        <GroupHead label="VV" colSpan={4} group="vv" />
+                        <GroupHead label="MIS" colSpan={7} group="mis" />
+                    </TableRow>
+
+                    {/* ── ROW 2 — sub headers ── */}
+                    {/* ✅ The key: sub-header row cells must NOT overlap sticky cells.
+                        Since rowSpan cells are in DOM row 1, row 2 cells start after col 2.
+                        But their z-index from stacking context beats the sticky cells.
+                        Fix: give the entire second TR a z-index lower than sticky cells via wrapper. */}
+                    <TableRow style={{ position: "relative", zIndex: 1 }}>
+                        <SubHead label="Total" isFirst group="dataops" />
+                        <SubHead label="Valid" group="dataops" />
+                        <SubHead label="Invalid" group="dataops" />
+
+                        <SubHead label="Total" isFirst group="email" />
+                        <SubHead label="Pending" group="email" />
+                        <SubHead label="Valid" group="email" />
+                        <SubHead label="Invalid" group="email" />
+
+                        <SubHead label="Total" isFirst group="quality" />
+                        <SubHead label="Pending" group="quality" />
+                        <SubHead label="Valid" group="quality" />
+                        <SubHead label="Invalid" group="quality" />
+
+                        <SubHead label="Total" isFirst group="dbr" />
+                        <SubHead label="Pending" group="dbr" />
+                        <SubHead label="Valid" group="dbr" />
+                        <SubHead label="Invalid" group="dbr" />
+
+                        <SubHead label="Total" isFirst group="vv" />
+                        <SubHead label="Pending" group="vv" />
+                        <SubHead label="Valid" group="vv" />
+                        <SubHead label="Invalid" group="vv" />
+
+                        <SubHead label="Total" isFirst group="mis" />
+                        <SubHead label="Pending" group="mis" />
+                        <SubHead label="Delivered" group="mis" />
+                        <SubHead label="Accepted" group="mis" />
+                        <SubHead label="Client Rejected" group="mis" />
+                        <SubHead label="RTD" group="mis" />
+                        <SubHead label="Internal Rejected" group="mis" />
+                    </TableRow>
+
+                </TableHeader>
+
+                <TableBody>
+                    {loading ? (
+                        <TableRow>
+                            <TableCell colSpan={30} className="text-center py-10 text-muted-foreground">Loading batches...</TableCell>
+                        </TableRow>
+                    ) : data.length === 0 ? (
+                        <TableRow>
+                            <TableCell colSpan={30} className="text-center py-10 text-muted-foreground">No batches found.</TableCell>
+                        </TableRow>
+                    ) : (
+                        data.map((batch) => (
+                            <TableRow key={batch.segment_code} className="odd:bg-transparent even:bg-muted/50 hover:bg-muted/50">
+                                <Link to={`/sentinel-batches/${batch.batch_code}`} className="contents ">
                                     <TableCell
-                                        colSpan={tableHeadings.length}
-                                        className="text-center py-8 text-muted-foreground"
+                                        className="font-medium text-primary text-center border-b border-r-2 border-border bg-background hover:underline"
+                                        style={stickySegmentBody}
                                     >
-                                        No records found.
+                                        {batch.campaign_code}_{batch.segment_code}
                                     </TableCell>
-                                </TableRow>
-                            ) : (
-                                paginated.map((item) => (
-                                    <TableRow
-                                        key={item.id}
-                                        className="hover:bg-lightprimary transition-colors even:bg-lightprimary/80"
-                                    >
-                                        {tableHeadings.map((col, index) => {
-                                            const raw = renderCell(item, col.key);
-                                            const isTitle = col.key === 'title';
-                                            const needsTooltip = isTitle && raw.length > TITLE_TRUNCATE;
-                                            const displayText = needsTooltip ? `${raw.slice(0, TITLE_TRUNCATE)}...` : raw;
 
-                                            return (
-                                                <TableCell
-                                                    key={col.key}
-                                                    className={`
-                            text-xs border-r border-border last:border-r-0
-                            ${col.sticky
-                                                            ? `sticky ${stickyOffset(index)} z-10 border-r border-border
-                                 bg-background `
-                                                            : ''
-                                                        }
-                            ${col.key === 'segmentId'
-                                                            ? 'font-semibold text-primary whitespace-nowrap'
-                                                            : ''
-                                                        }
-                            ${col.key === 'title'
-                                                            ? 'font-medium text-foreground'
-                                                            : 'text-muted-foreground text-center'
-                                                        }
-                          `}
-                                                >
-                                                    {needsTooltip ? (
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <span className="cursor-default whitespace-nowrap">
-                                                                    {displayText}
-                                                                </span>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent side="top" className="max-w-xs text-xs">
-                                                                {raw}
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    ) : (
-                                                        <span className={isTitle ? '' : 'whitespace-nowrap'}>
-                                                            {displayText}
-                                                        </span>
-                                                    )}
-                                                </TableCell>
-                                            );
-                                        })}
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
+                                </Link>
+                                <TableCell
+                                    className="border-b border-r-2 border-border bg-background"
+                                    style={stickyTitleBody}
+                                >
+                                    {batch.title && batch.title.length > 35 ? (
+                                        <TooltipProvider delayDuration={200}>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <div className="truncate cursor-pointer">
+                                                        {batch.title.slice(0, 35)}...
+                                                    </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent>{batch.title}</TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    ) : (
+                                        <div className="truncate">{batch.title || "-"}</div>
+                                    )}
+                                </TableCell>
 
-                {/* ── Pagination ── */}
-                <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
-                    <p className="text-xs text-muted-foreground">
-                        Showing{' '}
-                        {filtered.length === 0 ? 0 : (page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)}{' '}
-                        of {filtered.length} entries
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPage((p) => Math.max(1, p - 1))}
-                            disabled={page === 1}
-                        >
-                            Previous
-                        </Button>
-                        <span className="text-xs text-muted-foreground px-1">
-                            Page {page} of {totalPages}
-                        </span>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={page === totalPages}
-                        >
-                            Next
-                        </Button>
-                    </div>
-                </div>
+                                <GCell isFirst group="dataops">{batch.dataops_total}</GCell>
+                                <GCell group="dataops">{batch.dataops_valid}</GCell>
+                                <GCell group="dataops">{batch.dataops_invalid}</GCell>
 
-            </CardBox>
-        </TooltipProvider>
+                                <GCell isFirst group="email">{batch.email_total}</GCell>
+                                <GCell group="email">{batch.email_pending}</GCell>
+                                <GCell group="email">{batch.email_valid}</GCell>
+                                <GCell group="email">{batch.email_invalid}</GCell>
+
+                                <GCell isFirst group="quality">{batch.quality_total}</GCell>
+                                <GCell group="quality">{batch.quality_pending}</GCell>
+                                <GCell group="quality">{batch.quality_valid}</GCell>
+                                <GCell group="quality">{batch.quality_invalid}</GCell>
+
+                                <GCell isFirst group="dbr">{batch.dbr_total}</GCell>
+                                <GCell group="dbr">{batch.dbr_pending}</GCell>
+                                <GCell group="dbr">{batch.dbr_valid}</GCell>
+                                <GCell group="dbr">{batch.dbr_invalid}</GCell>
+
+                                <GCell isFirst group="vv">{batch.vv_total}</GCell>
+                                <GCell group="vv">{batch.vv_pending}</GCell>
+                                <GCell group="vv">{batch.vv_valid}</GCell>
+                                <GCell group="vv">{batch.vv_invalid}</GCell>
+
+                                <GCell isFirst group="mis">{batch.mis_total}</GCell>
+                                <GCell group="mis">{batch.mis_pending}</GCell>
+                                <GCell group="mis">{batch.mis_delivered}</GCell>
+                                <GCell group="mis">{batch.mis_accepted}</GCell>
+                                <GCell group="mis">{batch.mis_client_rejected}</GCell>
+                                <GCell group="mis">{batch.mis_rtd}</GCell>
+                                <GCell group="mis">{batch.mis_internal_rejected}</GCell>
+
+                            </TableRow>
+                        ))
+                    )}
+                </TableBody>
+            </Table>
+        </div>
     );
 };
 
