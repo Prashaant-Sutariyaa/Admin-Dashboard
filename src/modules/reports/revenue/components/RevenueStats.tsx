@@ -4,6 +4,7 @@ import {
     TrendingUp,
     CheckCircle2,
     AlertTriangle,
+    FlagTriangleLeft
 } from "lucide-react";
 
 import { formatCurrencyNumber } from "src/utils/formatCurrencyNumber";
@@ -13,9 +14,11 @@ interface Props {
         booked_leads?: number;
         accepted_leads?: number;
         deficit_leads?: number;
+        unrealized?: number;
         booked_revenue?: number;
         accepted_revenue?: number;
         revenue_pending?: number;
+        unrealized_revenue?: number;
     };
 
     loading?: boolean;
@@ -92,13 +95,33 @@ const RevenueStats = ({
             bg:
                 "bg-error/12 dark:bg-error/12",
 
-            text:
-                "text-erroremphasis",
+            text: "text-erroremphasis",
+        },
+        {
+            key: "Unrealized",
+
+            title: "Unrealized Value",
+
+            leads:
+                formatCurrencyNumber(
+                    data?.unrealized || 0
+                ),
+
+            revenue: `$ ${formatCurrencyNumber(
+                data?.unrealized_revenue || 0
+            )}`,
+
+            icon: FlagTriangleLeft,
+
+            bg:
+                "bg-muted dark:bg-muted/50",
+
+            text: "text-muted-foreground",
         },
     ];
 
     return (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
 
             {stats.map((item) => {
 

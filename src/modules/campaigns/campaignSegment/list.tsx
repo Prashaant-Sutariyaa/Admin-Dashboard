@@ -18,6 +18,7 @@ import { campaignService } from "../manageCampaigns/services/campaignService";
 import { campaignSegmentService } from "./services/campaignSegmentService";
 import { formatDateShort } from "src/utils/formatDateShort";
 import Can from "src/permissions/Can";
+import AutoComplete from "src/components/ui/AutoComplete";
 
 const CampaignSegmentList = () => {
     const [campaigns, setCampaigns] = useState<any[]>([]);
@@ -100,35 +101,25 @@ const CampaignSegmentList = () => {
             <CardBox>
 
                 <div className="flex justify-between items-center">
-
                     {/* DROPDOWN */}
-                    <div className="max-w-sm">
-                        <Select
-                            value={selectedCampaignId ? String(selectedCampaignId) : 'all'}
-                            onValueChange={handleCampaignChange}
-                        >
-                            <SelectTrigger className="min-w-40 w-full max-w-sm">
-                                <SelectValue placeholder="Select Campaign" />
-                            </SelectTrigger>
-
-                            <SelectContent>
-                                <SelectItem value="all">All Campaigns</SelectItem>
-                                {campaigns.map((c) => (
-                                    <SelectItem key={c.id} value={String(c.id)}>
-                                        {c.code} - {c.campaign_name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    <div className="w-full max-w-lg">
+                        <AutoComplete
+                            value={selectedCampaignId ? String(selectedCampaignId) : "all"}
+                            onChange={handleCampaignChange}
+                            placeholder="Search campaign..."
+                            options={[
+                                { label: "All Campaigns", value: "all", },
+                                ...campaigns.map((c) => ({
+                                    label: `${c.code} - ${c.campaign_name}`,
+                                    value: String(c.id),
+                                })),
+                            ]}
+                        />
                     </div>
 
                     {/* EDIT BUTTON */}
                     <Can module="campaign_segment" action="edit">
-                        <Button
-                            variant="lightprimary"
-                            disabled={!selectedCampaignId}
-                            onClick={() => setIsEditing(true)}
-                        >
+                        <Button variant="lightprimary" disabled={!selectedCampaignId} onClick={() => setIsEditing(true)}>
                             Edit Segments
                         </Button>
                     </Can>

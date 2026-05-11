@@ -50,20 +50,26 @@ export interface SentinelBatchListResponse {
 }
 
 export const SentinelBatchesService = {
-async getBatches(
+ async getBatches(
   page = 1,
   limit = 10,
-  search = ""
+  search?: string
 ): Promise<SentinelBatchListResponse> {
+
+  const params: any = {
+    page,
+    limit,
+  };
+
+  // ✅ only send if value exists
+  if (search?.trim()) {
+    params.search = search.trim();
+  }
 
   const res = await apiClient.get(
     "/sentinel-batches/",
     {
-      params: {
-        page,
-        limit,
-        search,
-      },
+      params,
     }
   );
 

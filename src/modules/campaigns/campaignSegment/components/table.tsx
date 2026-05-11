@@ -20,6 +20,8 @@ import { toast } from 'sonner';
 import { useConfirm } from 'src/components/shared/confirmdialog/confirm-context';
 import { campaignSegmentService } from '../services/campaignSegmentService';
 import { formatDateShort } from 'src/utils/formatDateShort';
+import UnrealizedReasonDialog from "./dialog";
+import { useState } from 'react';
 
 interface Props {
     campaignId: number | undefined;
@@ -42,12 +44,12 @@ const CampSegmentTable = ({
 }: Props) => {
 
     const confirm = useConfirm();
+    const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
 
-    const getDeficit = (row: any) =>
-        Number(row.allocation || 0) - Number(row.accepted || 0);
+    const [pendingRows, setPendingRows] = useState<any[]>([]);
+    const getDeficit = (row: any) => Number(row.allocation || 0) - Number(row.accepted || 0);
 
-    const getTBD = (row: any) =>
-        Number(row.delivered || 0) - (Number(row.accepted || 0) + Number(row.rejected || 0));
+    const getTBD = (row: any) => Number(row.delivered || 0) - (Number(row.accepted || 0) + Number(row.rejected || 0));
 
     const handleChange = (index: number, field: string, value: any) => {
         const updated = [...segments];
@@ -74,6 +76,7 @@ const CampSegmentTable = ({
                 accepted: 0,
                 rejected: 0,
                 status: 'Not Started',
+                unrealized_reason: "",
             }
         ]);
     };
@@ -93,31 +96,114 @@ const CampSegmentTable = ({
         setSegments(updated);
     };
 
-    const handleSave = async () => {
-        try {
-            const cleaned = segments.map((s) => ({
-                id: s.id,
-                title: s.title,
-                segment_start_date: s.segment_start_date,
-                segment_end_date: s.segment_end_date,
-                allocation: Number(s.allocation || 0),
-                delivered: Number(s.delivered || 0),
-                accepted: Number(s.accepted || 0),
-                rejected: Number(s.rejected || 0),
-                status: s.status,
-            }));
+const handleSave = async (
+    updatedSegments?: any[]
+) => {
 
-            await campaignSegmentService.bulkUpdate({
-                campaign_id: campaignId,
-                segments: cleaned,
-            });
+    try {
 
-            toast.success('Segments updated successfully');
-            setIsEditing(false);
-        } catch (e: any) {
-            toast.error(e?.response?.data?.detail || 'Failed');
+        const finalSegments =
+            updatedSegments || segments;
+
+        // ✅ preserve original index
+        const rowsNeedingReason =
+            finalSegments
+                .map((s, index) => ({
+                    ...s,
+                    rowIndex: index,
+                    deficit: getDeficit(s),
+                }))
+                .filter(
+                    (s) =>
+                        s.status === "Completed" &&
+                        s.deficit !== 0
+                );
+
+        // ✅ open dialog first
+        if (
+            rowsNeedingReason.length > 0 &&
+            !updatedSegments
+        ) {
+
+            setPendingRows(rowsNeedingReason);
+
+            setReasonDialogOpen(true);
+
+            return;
         }
-    };
+
+        // ✅ final payload
+        const cleaned = finalSegments.map((s) => ({
+            id: s.id,
+
+            title: s.title,
+
+            segment_start_date:
+                s.segment_start_date,
+
+            segment_end_date:
+                s.segment_end_date,
+
+            allocation:
+                Number(s.allocation || 0),
+
+            delivered:
+                Number(s.delivered || 0),
+
+            accepted:
+                Number(s.accepted || 0),
+
+            rejected:
+                Number(s.rejected || 0),
+
+            status: s.status,
+
+            unrealized_reason:
+                s.unrealized_reason || null,
+        }));
+
+        await campaignSegmentService.bulkUpdate({
+            campaign_id: campaignId,
+            segments: cleaned,
+        });
+
+        toast.success(
+            "Segments updated successfully"
+        );
+
+        setIsEditing(false);
+
+        setReasonDialogOpen(false);
+
+    } catch (e: any) {
+
+        toast.error(
+            e?.response?.data?.detail ||
+            "Failed"
+        );
+    }
+};
+
+const handleReasonSubmit = (
+    reasons: Record<number, string>
+) => {
+
+    const updated = [...segments];
+
+    pendingRows.forEach((row, idx) => {
+
+        updated[row.rowIndex] = {
+            ...updated[row.rowIndex],
+
+            unrealized_reason:
+                reasons[idx],
+        };
+    });
+
+    setSegments(updated);
+
+    handleSave(updated);
+};
 
     const handleCancel = () => {
         setSegments(originalSegments); // 🔥 reset everything
@@ -130,7 +216,7 @@ const CampSegmentTable = ({
             {isEditing && (
                 <div className="flex justify-end gap-2 p-3">
                     <Button variant="lighterror" onClick={handleCancel}>Cancel</Button>
-                    <Button variant="lightprimary" onClick={handleSave}>Save</Button>
+                    <Button variant="lightprimary" onClick={() => handleSave()}>Save</Button>
                 </div>
             )}
 
@@ -244,12 +330,12 @@ const CampSegmentTable = ({
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             {CAMPAIGN_STATUS_OPTIONS.map(opt => {
-                                                const disableCompleted =
-                                                    opt.value === 'Completed' &&
-                                                    (getDeficit(s) !== 0 || Number(s.allocation) === 0);
+                                                // const disableCompleted =
+                                                //     opt.value === 'Completed' &&
+                                                //     (getDeficit(s) !== 0 || Number(s.allocation) === 0);
 
                                                 return (
-                                                    <SelectItem key={opt.value} value={opt.value} disabled={disableCompleted}>
+                                                    <SelectItem key={opt.value} value={opt.value} /* disabled={disableCompleted} */>
                                                         {opt.label}
                                                     </SelectItem>
                                                 );
@@ -282,6 +368,14 @@ const CampSegmentTable = ({
 
                 </TableBody>
             </Table>
+            <UnrealizedReasonDialog
+                open={reasonDialogOpen}
+                rows={pendingRows}
+                onClose={() => {
+                    setReasonDialogOpen(false);
+                }}
+                onSubmit={handleReasonSubmit}
+            />
         </div>
     );
 };

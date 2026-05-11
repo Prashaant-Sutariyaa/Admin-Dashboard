@@ -23,7 +23,7 @@ const GROUP = {
 };
 
 const GroupHead = ({ label, colSpan, group }: { label: string; colSpan: number; group: keyof typeof GROUP }) => (
-    <TableHead colSpan={colSpan} className={`text-center font-semibold text-xs uppercase tracking-wide border-l-2 border-r border-b-2 ${GROUP[group].headerBg} ${GROUP[group].border}`}>
+    <TableHead colSpan={colSpan} className={`text-center font-semibold text-xs tracking-wide border-l-2 border-r border-b-2 ${GROUP[group].headerBg} ${GROUP[group].border}`}>
         {label}
     </TableHead>
 );
@@ -143,7 +143,7 @@ const SentinelBatchesTable = ({ data, loading }: Props) => {
                     ) : (
                         data.map((batch) => (
                             <TableRow key={batch.segment_code} className="odd:bg-transparent even:bg-muted/50 hover:bg-muted/50">
-                                <Link to={`/sentinel-batches/${batch.batch_code}`} className="contents ">
+                                <Link to={`/sentinel-batches/${batch.segment_code}`} className="contents ">
                                     <TableCell
                                         className="font-medium text-primary text-center border-b border-r-2 border-border bg-background hover:underline"
                                         style={stickySegmentBody}

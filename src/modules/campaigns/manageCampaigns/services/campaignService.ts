@@ -55,7 +55,7 @@ const mapCampaign = (item: any): Campaign => ({
 export const campaignService = {
     async getCampaigns() {
         const res = await apiClient.get('/campaigns/');
-        return res.data.map(mapCampaign);
+        return res.data.data.map(mapCampaign);
     },
 
     async getCampaignById(id: number) {

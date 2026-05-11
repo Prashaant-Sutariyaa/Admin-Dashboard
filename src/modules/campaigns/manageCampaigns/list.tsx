@@ -10,6 +10,7 @@ import CampaignDialog from './components/dialogForm';
 
 import { campaignService, Campaign } from './services/campaignService';
 import { clientService, Client } from 'src/modules/clients/services/clientService';
+import Pagination from 'src/modules/reports/revenue/components/pagination';
 
 import { useConfirm } from 'src/components/shared/confirmdialog/confirm-context';
 import { toast } from 'sonner';
@@ -18,7 +19,8 @@ import Can from 'src/permissions/Can';
 const CampaignList = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);

@@ -28,7 +28,7 @@ const SentinelBatchSearch = ({
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Search by segment code or campaign title..."
+        placeholder="Search by segment code or campaign code..."
         className="pl-9"
       />
 
