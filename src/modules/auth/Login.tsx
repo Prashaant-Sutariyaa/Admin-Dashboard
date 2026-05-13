@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 
@@ -8,10 +8,41 @@ import { Checkbox } from "src/components/ui/checkbox";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { usePermissionContext } from 'src/permissions/PermissionContext';
+import { Icon } from "@iconify/react";
 
 import { authService } from "./services/authService";
 
 const REMEMBER_KEY = "remembered_email";
+
+const features = [
+  {
+    icon: "solar:chart-2-linear",
+    title: "Real-time analytics",
+    desc: "Track campaign delivery and performance live",
+  },
+  {
+    icon: "solar:shield-keyhole-linear",
+    title: "Role-based access",
+    desc: "Fine-grained permissions per module and action",
+  },
+  {
+    icon: "solar:bolt-linear",
+    title: "Fast & reliable",
+    desc: "Built for teams that move quickly",
+  },
+];
+
+const quotes = [
+  { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
+  { text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
+  { text: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson" },
+  { text: "The way to get started is to quit talking and begin doing.", author: "Walt Disney" },
+  { text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", author: "Winston Churchill" },
+  { text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
+  { text: "Hard work beats talent when talent doesn't work hard.", author: "Tim Notke" },
+];
+
+const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
 const Login = () => {
   const navigate = useNavigate();
@@ -21,10 +52,10 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [remembered, setRemembered] = useState(false);
   const [email, setEmail] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const from = location.state?.from?.pathname || "/";
 
-  // ✅ On mount — prefill email if remembered
   useEffect(() => {
     const savedEmail = localStorage.getItem(REMEMBER_KEY);
     if (savedEmail) {
@@ -40,7 +71,6 @@ const Login = () => {
     const emailVal = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    // ✅ Remember me logic
     if (remembered) {
       localStorage.setItem(REMEMBER_KEY, emailVal);
     } else {
@@ -50,10 +80,7 @@ const Login = () => {
     try {
       setLoading(true);
 
-      const data = await authService.login({
-        username: emailVal,
-        password,
-      });
+      const data = await authService.login({ username: emailVal, password });
 
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("name", data.user.first_name);
@@ -62,7 +89,7 @@ const Login = () => {
       const access = await authService.getUserAccess();
       loadPermissions(access.permissions);
 
-      toast.info(`Welcome back, ${data.user.first_name}. You're all set.`);
+      toast.success(`Welcome back, ${data.user.first_name}!`);
       navigate(from, { replace: true });
 
     } catch (err) {
@@ -75,179 +102,226 @@ const Login = () => {
   return (
     <div className="min-h-screen flex">
 
-      {/* LEFT SIDE */}
+      {/* ── LEFT SIDE ─────────────────────────────────── */}
       <div
-        className="hidden md:flex w-3/5 items-center justify-center p-10 relative overflow-hidden"
-        style={{ background: "linear-gradient(145deg, #1a2540 0%, #1e3a5f 60%, #1a2e4a 100%)" }}
+        className="hidden md:flex w-3/5 flex-col items-center justify-center p-12 relative overflow-hidden"
+        style={{
+          background: "linear-gradient(145deg, #111827 0%, #1a2e50 55%, #0f2035 100%)",
+        }}
       >
-        <div className="absolute" style={{ width: 460, height: 460, borderRadius: "50%", border: "1px solid rgba(93,135,255,0.12)", top: -100, left: -120 }} />
-        <div className="absolute" style={{ width: 300, height: 300, borderRadius: "50%", border: "1px solid rgba(93,135,255,0.08)", top: 40, left: -30 }} />
-        <div className="absolute" style={{ width: 520, height: 520, borderRadius: "50%", border: "1px solid rgba(73,190,255,0.07)", bottom: -200, right: -140 }} />
-        <div className="absolute" style={{ width: 160, height: 160, borderRadius: "50%", background: "rgba(93,135,255,0.06)", bottom: 80, left: 50 }} />
-        <div className="absolute" style={{ width: 80, height: 80, borderRadius: "50%", background: "rgba(73,190,255,0.08)", top: 130, right: 90 }} />
-        <div className="absolute" style={{ width: 120, height: 120, borderRadius: 20, border: "1px solid rgba(93,135,255,0.1)", top: 220, left: 70, transform: "rotate(18deg)" }} />
+        {/* Decorative rings */}
+        {[
+          { w: 500, h: 500, t: -140, l: -160, op: 0.1 },
+          { w: 320, h: 320, t: 30,   l: -40,  op: 0.07 },
+          { w: 560, h: 560, b: -220, r: -160, op: 0.06 },
+        ].map((r, i) => (
+          <div
+            key={i}
+            className="absolute pointer-events-none rounded-full"
+            style={{
+              width: r.w, height: r.h,
+              top: r.t, left: r.l, bottom: r.b, right: r.r,
+              border: `1px solid rgba(93,135,255,${r.op})`,
+            }}
+          />
+        ))}
+
+        {/* Glow blobs */}
+        <div className="absolute pointer-events-none" style={{ width: 180, height: 180, borderRadius: "50%", background: "rgba(93,135,255,0.07)", bottom: 100, left: 60 }} />
+        <div className="absolute pointer-events-none" style={{ width: 90, height: 90, borderRadius: "50%", background: "rgba(73,190,255,0.09)", top: 120, right: 80 }} />
+        <div className="absolute pointer-events-none" style={{ width: 130, height: 130, borderRadius: 20, border: "1px solid rgba(93,135,255,0.09)", top: 200, left: 80, transform: "rotate(18deg)" }} />
 
         {/* Content */}
-        <div className="relative z-10 max-w-md text-center">
-          <h2 className="text-3xl font-bold mb-3" style={{ color: "rgba(255,255,255,0.92)" }}>
-            Manage your business smarter
+        <div className="relative z-10 max-w-lg w-full">
+
+          {/* Brand mark */}
+          <div className="mb-10 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "rgba(93,135,255,0.15)", border: "1px solid rgba(93,135,255,0.2)" }}>
+              <Icon icon="solar:buildings-2-linear" width={18} style={{ color: "#5d87ff" }} />
+            </div>
+            <span className="text-sm font-semibold tracking-wide" style={{ color: "rgba(255,255,255,0.5)" }}>
+              ProspectVine CRM
+            </span>
+          </div>
+
+          <h2 className="text-4xl font-bold mb-3 leading-tight" style={{ color: "rgba(255,255,255,0.93)", letterSpacing: "-0.02em" }}>
+            Manage your business<br />
+            <span style={{ color: "#5d87ff" }}>smarter.</span>
           </h2>
-          <p className="mb-8 text-sm" style={{ color: "rgba(255,255,255,0.5)", lineHeight: 1.7 }}>
+          <p className="text-sm mb-10" style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.75 }}>
             One platform for clients, campaigns, leads, and your entire team workflow.
           </p>
 
-          {/* Feature highlights */}
-          <div className="flex flex-col gap-3 mb-8">
-            {[
-              { icon: "📊", title: "Real-time analytics", desc: "Track campaign delivery and performance live" },
-              { icon: "🔒", title: "Role-based access", desc: "Fine-grained permissions per module and action" },
-              { icon: "⚡", title: "Fast & reliable", desc: "Built for teams that move quickly" },
-            ].map((f) => (
+          {/* Feature cards */}
+          <div className="flex flex-col gap-3 mb-10">
+            {features.map((f) => (
               <div
                 key={f.title}
-                className="flex items-center gap-4 text-left"
+                className="flex items-center gap-4"
                 style={{
-                  background: "rgba(255,255,255,0.05)",
-                  backdropFilter: "blur(10px)",
-                  WebkitBackdropFilter: "blur(10px)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(255,255,255,0.04)",
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                  border: "1px solid rgba(255,255,255,0.07)",
                   borderRadius: 12,
                   padding: "14px 18px",
                 }}
               >
-                <span style={{ fontSize: 20, lineHeight: 1 }}>{f.icon}</span>
+                <div
+                  className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
+                  style={{ background: "rgba(93,135,255,0.12)", border: "1px solid rgba(93,135,255,0.15)" }}
+                >
+                  <Icon icon={f.icon} width={17} style={{ color: "#5d87ff" }} />
+                </div>
                 <div>
                   <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>{f.title}</p>
-                  <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>{f.desc}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>{f.desc}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Random quote */}
-          {(() => {
-            const quotes = [
-              { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
-              { text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
-              { text: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson" },
-              { text: "The way to get started is to quit talking and begin doing.", author: "Walt Disney" },
-              { text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", author: "Winston Churchill" },
-              { text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
-              { text: "Hard work beats talent when talent doesn't work hard.", author: "Tim Notke" },
-            ];
-            const q = quotes[Math.floor(Math.random() * quotes.length)];
-            return (
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.07)",
-                  borderRadius: 12,
-                  padding: "20px 24px",
-                  textAlign: "left",
-                }}
-              >
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.7, fontStyle: "italic", marginBottom: 10 }}>
-                  "{q.text}"
-                </p>
-                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
-                  — {q.author}
-                </p>
-              </div>
-            );
-          })()}
+          {/* Quote */}
+          <div
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.06)",
+              borderLeft: "3px solid rgba(93,135,255,0.5)",
+              borderRadius: "0 12px 12px 0",
+              padding: "18px 22px",
+            }}
+          >
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.75, fontStyle: "italic", marginBottom: 8 }}>
+              "{randomQuote.text}"
+            </p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", fontWeight: 500 }}>
+              — {randomQuote.author}
+            </p>
+          </div>
+
         </div>
       </div>
 
-      {/* RIGHT SIDE */}
-      <div className="w-full md:w-2/5 flex items-center justify-center px-6 bg-background relative overflow-hidden">
+      {/* ── RIGHT SIDE ────────────────────────────────── */}
+      <div className="w-full md:w-2/5 flex items-center justify-center px-8 bg-background relative overflow-hidden">
 
-        {/* Subtle bg shapes on right side */}
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            width: 300,
-            height: 300,
-            borderRadius: "50%",
-            background: "color-mix(in oklab, #5d87ff 6%, transparent)",
-            top: -80,
-            right: -80,
-          }}
-        />
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            width: 200,
-            height: 200,
-            borderRadius: "50%",
-            background: "color-mix(in oklab, #49beff 5%, transparent)",
-            bottom: -60,
-            left: -60,
-          }}
-        />
+        {/* Subtle bg shapes */}
+        <div className="absolute pointer-events-none" style={{ width: 320, height: 320, borderRadius: "50%", background: "color-mix(in oklab, var(--primary) 5%, transparent)", top: -100, right: -100 }} />
+        <div className="absolute pointer-events-none" style={{ width: 220, height: 220, borderRadius: "50%", background: "color-mix(in oklab, var(--secondary) 4%, transparent)", bottom: -70, left: -70 }} />
 
-        <div className="w-full max-w-md relative z-10">
+        <div className="w-full max-w-sm relative z-10">
+
+          {/* Logo */}
           <div className="mb-8">
             <FullLogo />
           </div>
 
-          <h2 className="text-2xl font-semibold mb-2">Welcome Back 👋</h2>
-          <p className="text-muted-foreground mb-6">Sign in to continue</p>
+          {/* Heading */}
+          <div className="mb-7">
+            <h2 className="text-2xl font-semibold text-foreground mb-1.5">
+              Welcome back 👋
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Sign in to your account to continue
+            </p>
+          </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                required
-                className="mt-2"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
-            <div className="mb-4">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                required
-                className="mt-2"
-              />
-            </div>
-
-            <div className="flex justify-between items-center my-5">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="remember"
-                  checked={remembered}
-                  onCheckedChange={(v) => setRemembered(!!v)}
+            {/* Email */}
+            <div>
+              <Label htmlFor="email" className="mb-2 block">Email</Label>
+              <div className="relative">
+                <Icon
+                  icon="solar:letter-linear"
+                  width={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
                 />
-                <Label htmlFor="remember" className="text-sm font-normal">
-                  Remember me
-                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  placeholder="you@prospectvine.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-9"
+                />
               </div>
-
-              <Link to="/" className="text-primary text-sm font-medium">
-                Forgot password?
-              </Link>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign in"}
+            {/* Password */}
+            <div>
+              <Label htmlFor="password" className="mb-2 block">Password</Label>
+              <div className="relative">
+                <Icon
+                  icon="solar:lock-keyhole-linear"
+                  width={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                />
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Enter your password"
+                  className="pl-9 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Icon
+                    icon={showPassword ? 'solar:eye-closed-linear' : 'solar:eye-linear'}
+                    width={16}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Remember me */}
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="remember"
+                checked={remembered}
+                onCheckedChange={(v) => setRemembered(!!v)}
+              />
+              <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
+                Remember me
+              </Label>
+            </div>
+
+            {/* Submit */}
+            <Button
+              type="submit"
+              className="w-full bg-primary hover:bg-primaryemphasis text-white font-medium py-2.5 mt-1"
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <Icon icon="solar:spinner-linear" width={16} className="animate-spin" />
+                  Signing in...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  Sign in
+                  <Icon icon="solar:arrow-right-linear" width={16} />
+                </span>
+              )}
             </Button>
+
           </form>
 
-          <div className="flex gap-2 text-sm mt-6 justify-center">
-            <p className="text-muted-foreground">New here?</p>
-            <Link to="/register" className="text-primary font-medium">
-              Create an account
-            </Link>
-          </div>
+          {/* Footer note */}
+          <p className="text-xs text-muted-foreground text-center mt-8">
+            © {new Date().getFullYear()} ProspectVine Pvt. Ltd. All rights reserved.
+          </p>
+
         </div>
       </div>
+
     </div>
   );
 };
