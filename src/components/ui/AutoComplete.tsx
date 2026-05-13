@@ -93,7 +93,7 @@ const AutoComplete = ({
                     disabled={disabled}
                     value={inputDisplayValue}
                     onChange={handleInputChange}
-                    onFocus={() => !disabled && setOpen(true)}
+                    onClick={() => !disabled && setOpen(true)}
                     placeholder={selected ? "" : placeholder}
                     className="flex-1 h-full bg-transparent outline-none placeholder:text-muted-foreground text-foreground disabled:cursor-not-allowed min-w-0 py-0"
                 />

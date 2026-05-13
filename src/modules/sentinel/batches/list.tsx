@@ -4,6 +4,7 @@ import SlimBreadcrumb from "src/components/shared/breadcrumb/SlimBreadcrumb";
 import CardBox from "src/components/shared/CardBox";
 
 import SharedPagination from "src/components/shared/pagination/SharedPagination";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "src/components/ui/dialog";
 
 import SentinelBatchesTable from "./components/table";
 import SentinelBatchSearch from "./components/searchFilter";
@@ -12,10 +13,13 @@ import {
     SentinelBatch,
     SentinelBatchesService,
 } from "./services/SentinelBatchesService";
+import { Button } from "src/components/ui/button";
+import { Upload } from "lucide-react";
+import SentinelBatchUploadDialog from "./components/dialog";
 
 const SentinelBatches = () => {
     const [loading, setLoading] = useState(false);
-
+    const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
     const [batches, setBatches] = useState<SentinelBatch[]>([]);
 
     const [page, setPage] = useState(1);
@@ -79,20 +83,23 @@ const SentinelBatches = () => {
             <CardBox className="overflow-hidden">
 
                 {/* Search */}
-                <div className="p-4 ">
+                {/* Top Actions */}
+                <div className="p-4 flex items-center justify-between gap-4">
 
                     <SentinelBatchSearch
                         value={search}
                         onChange={setSearch}
                     />
 
+                    <Button variant="lightprimary" onClick={() => setUploadDialogOpen(true)}>
+                        <Upload className="size-4" />
+                        Upload
+                    </Button>
+
                 </div>
 
                 {/* Table */}
-                <SentinelBatchesTable
-                    data={batches}
-                    loading={loading}
-                />
+                <SentinelBatchesTable data={batches} loading={loading} />
 
                 {/* Pagination */}
                 <SharedPagination
@@ -107,6 +114,7 @@ const SentinelBatches = () => {
                 />
 
             </CardBox>
+            <SentinelBatchUploadDialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen} />
         </>
     );
 };

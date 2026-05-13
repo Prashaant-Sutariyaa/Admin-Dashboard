@@ -1,11 +1,6 @@
 import CardBox from "src/components/shared/CardBox";
 
-import {
-    TrendingUp,
-    CheckCircle2,
-    AlertTriangle,
-    FlagTriangleLeft
-} from "lucide-react";
+import { BriefcaseBusiness, BadgeCheck, CircleAlert, WalletCards } from "lucide-react";
 
 import { formatCurrencyNumber } from "src/utils/formatCurrencyNumber";
 
@@ -44,7 +39,7 @@ const RevenueStats = ({
                 data?.booked_revenue || 0
             )}`,
 
-            icon: TrendingUp,
+            icon: BriefcaseBusiness,
 
             bg:
                 "bg-primary/12 dark:bg-primary/12",
@@ -67,7 +62,7 @@ const RevenueStats = ({
                 data?.accepted_revenue || 0
             )}`,
 
-            icon: CheckCircle2,
+            icon: BadgeCheck,
 
             bg:
                 "bg-success/12 dark:bg-success/12",
@@ -90,7 +85,7 @@ const RevenueStats = ({
                 data?.revenue_pending || 0
             )}`,
 
-            icon: AlertTriangle,
+            icon: CircleAlert,
 
             bg:
                 "bg-error/12 dark:bg-error/12",
@@ -111,7 +106,7 @@ const RevenueStats = ({
                 data?.unrealized_revenue || 0
             )}`,
 
-            icon: FlagTriangleLeft,
+            icon: WalletCards,
 
             bg:
                 "bg-muted dark:bg-muted/50",
@@ -121,7 +116,7 @@ const RevenueStats = ({
     ];
 
     return (
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-2">
 
             {stats.map((item) => {
 
@@ -130,14 +125,7 @@ const RevenueStats = ({
                 return (
                     <CardBox
                         key={item.key}
-                        className={`
-                            border-none
-                            shadow-sm
-                            hover:shadow-md
-                            transition-all duration-300
-                            ${item.bg}
-                            group
-                        `}
+                        className={`border-none px-3 shadow-sm hover:shadow-md transition-all duration-300 ${item.bg} group`}
                     >
 
                         {loading ? (
@@ -146,7 +134,7 @@ const RevenueStats = ({
 
                         ) : (
 
-                            <div className="flex items-center gap-4 group-hover:-translate-y-0.5 transition-transform duration-300">
+                            <div className="flex items-center gap-2 group-hover:-translate-y-0.5 transition-transform duration-300">
 
                                 {/* ICON */}
                                 <div className="shrink-0">
@@ -171,7 +159,7 @@ const RevenueStats = ({
                                     </p>
 
                                     {/* STATS */}
-                                    <div className="flex items-center justify-between gap-6">
+                                    <div className="flex items-center justify-between gap-2">
 
                                         {/* LEADS */}
                                         <div>
