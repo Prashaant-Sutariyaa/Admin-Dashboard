@@ -1,13 +1,11 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "src/components/ui/table";
 import { SentinelBatch } from "../services/SentinelBatchesService";
-
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "src/components/ui/tooltip";
 interface Props {
     data: SentinelBatch[];
     loading: boolean;
 }
 
-const SEGMENT_WIDTH = 130;
+const SEGMENT_WIDTH = 110;
 
 const GROUP = {
     dataops: { headerBg: "bg-lightprimary", bodyBg: "bg-lightprimary/30", text: "text-primary", border: "border-primary/30" },
@@ -115,18 +113,9 @@ const SentinelBatchDetailsTable = ({ data, loading }: Props) => {
                             {data.map((batch) => (
                                 <TableRow key={batch.segment_code} className="odd:bg-transparent text-left even:bg-muted/50 hover:bg-muted/50">
                                     <TableCell className="border-b border-r-2 border-border bg-background " style={stickySegmentBody}>
-                                        <TooltipProvider delayDuration={200}>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <span className="font-medium cursor-pointer text-primary">
-                                                        {batch.batch_code}
-                                                    </span>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    Segment Code: {batch.segment_code}
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
+                                        <span className="font-medium cursor-pointer text-primary">
+                                            {batch.batch_code}
+                                        </span>
                                     </TableCell>
                                     <GCell isFirst group="dataops">{batch.dataops_total}</GCell>
                                     <GCell group="dataops">{batch.dataops_valid}</GCell>

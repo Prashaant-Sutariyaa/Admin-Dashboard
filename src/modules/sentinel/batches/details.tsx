@@ -23,6 +23,7 @@ const SentinelDetailBatch = () => {
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(20);
     const [total, setTotal] = useState(0);
+    const firstRow = data?.[0];
     const loadData = async () => {
         try {
             if (!segmentCode) return;
@@ -67,14 +68,17 @@ const SentinelDetailBatch = () => {
                                 </h5>
                                 <div className="flex flex-wrap items-center gap-2">
                                     <p className="text-sm text-muted-foreground">
-                                        Segment Code
+                                        {firstRow?.title || "-"}
+                                    </p>
+                                    <div className="hidden h-4 w-px bg-border xl:block"></div>
+                                    <p className="text-sm text-primary">
+                                        {firstRow?.campaign_code || "-"}
                                     </p>
                                     <div className="hidden h-4 w-px bg-border xl:block"></div>
                                     <p className="text-sm font-medium text-primary">
                                         {segmentCode}
                                     </p>
                                     <div className="hidden h-4 w-px bg-border xl:block"></div>
-                                    <p className="text-sm text-muted-foreground">Total Batches: {total}</p>
 
                                 </div>
 
@@ -87,7 +91,7 @@ const SentinelDetailBatch = () => {
                 </CardBox>
 
                 {/* TABLE */}
-                <SentinelBatchDetailsTable data={data}loading={loading}/>
+                <SentinelBatchDetailsTable data={data} loading={loading} />
 
                 {/* PAGINATION */}
                 <SharedPagination

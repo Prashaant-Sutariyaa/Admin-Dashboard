@@ -167,18 +167,21 @@ const SidebarContent: MenuItem[] = [
             name: 'Campaigns',
             icon: 'lucide:bar-chart-2',
             url: '/sentinel-campaigns',
+            module: 'sentinel'
           },
           {
             id: uniqueId(),
             name: 'Segments',
             icon: 'lucide:layers',
             url: '/sentinel-segments',
+            module: 'sentinel'
           },
           {
             id: uniqueId(),
             name: 'Jobs',
             icon: 'lucide:circle-play',
             url: '/sentinel-jobs',
+            module: 'sentinel'
           },
         ],
       },

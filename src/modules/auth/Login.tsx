@@ -274,7 +274,7 @@ const Login = () => {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Icon
-                    icon={showPassword ? 'solar:eye-closed-linear' : 'solar:eye-linear'}
+                    icon={showPassword ? 'solar:eye-linear' : 'solar:eye-closed-linear'}
                     width={16}
                   />
                 </button>
