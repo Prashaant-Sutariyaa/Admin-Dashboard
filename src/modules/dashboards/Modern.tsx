@@ -7,7 +7,7 @@ const Moderndash = () => {
         <>
             <div className="grid grid-cols-12 gap-6">
                 <div className="col-span-12">
-                    <div className="relative flex items-center justify-between bg-lightsecondary rounded-lg p-6">
+                    <div className="relative flex items-center justify-between bg-primary/10 rounded-lg p-6">
                         <div className="flex items-center gap-3">
                             <div>
                                 <img src={userImg} alt="user-img" width={50} height={50} className="rounded-full" />

@@ -39,7 +39,7 @@ const CampaignSegmentList = () => {
     const loadAll = async () => {
         try {
             const [campaignData, segmentData] = await Promise.all([
-                campaignService.getCampaigns(),
+                campaignService.getAllCampaigns(),
                 campaignSegmentService.getAllCampaignSegment(), // :contentReference[oaicite:0]{index=0}
             ]);
 

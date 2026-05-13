@@ -53,7 +53,7 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
         try {
             setLoading(true);
             const [campaignRes, departmentRes] = await Promise.all([
-                campaignService.getCampaigns(),
+                campaignService.getAllCampaigns(),
                 departmentService.getActiveDepartmentsList(),
             ]);
 

@@ -53,9 +53,21 @@ const mapCampaign = (item: any): Campaign => ({
 });
 
 export const campaignService = {
-    async getCampaigns() {
+    async getAllCampaigns() {
         const res = await apiClient.get('/campaigns/');
         return res.data.data.map(mapCampaign);
+    },
+
+    async getCampaigns(page = 1, limit = 20, status = "") {
+        const params: any = { page, limit };
+        if (status) { params.status = status; }
+        const res = await apiClient.get('/campaigns/', { params });
+        return {
+            data: res.data.data.map(mapCampaign),
+            total: res.data.total || 0,
+            page: res.data.page || 1,
+            limit: res.data.limit || limit,
+        };
     },
 
     async getCampaignById(id: number) {
