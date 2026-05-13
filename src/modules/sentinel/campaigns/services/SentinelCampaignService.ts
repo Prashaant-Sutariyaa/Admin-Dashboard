@@ -49,19 +49,14 @@ export interface SentinelBatchListResponse {
   total: number;
 }
 
-export const SentinelBatchesService = {
+export const SentinelCampaignService = {
 
-  async getBatches(page = 1, limit = 10, search?: string): Promise<SentinelBatchListResponse> {
+  async getSentinelCampaigns(page = 1, limit = 10, search?: string): Promise<SentinelBatchListResponse> {
     const params: any = { page, limit };
     if (search?.trim()) {
-      params.search = search.trim();
+      params.campaign_search = search.trim();
     }
     const res = await apiClient.get("/sentinel-batches/", { params, });
-    return res.data;
-  },
-
-  async getBatchDetails(segmentCode: string, page = 1, limit = 20): Promise<SentinelBatchListResponse> {
-    const res = await apiClient.get(`/sentinel-batches/segment/${segmentCode}`, { params: { page, limit } });
     return res.data;
   },
 

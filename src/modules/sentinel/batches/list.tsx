@@ -4,7 +4,6 @@ import SlimBreadcrumb from "src/components/shared/breadcrumb/SlimBreadcrumb";
 import CardBox from "src/components/shared/CardBox";
 
 import SharedPagination from "src/components/shared/pagination/SharedPagination";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "src/components/ui/dialog";
 
 import SentinelBatchesTable from "./components/table";
 import SentinelBatchSearch from "./components/searchFilter";
@@ -16,8 +15,10 @@ import {
 import { Button } from "src/components/ui/button";
 import { Upload } from "lucide-react";
 import SentinelBatchUploadDialog from "./components/dialog";
+import { useSearchParams } from "react-router";
 
 const SentinelBatches = () => {
+    const [searchParams] = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
     const [batches, setBatches] = useState<SentinelBatch[]>([]);
@@ -27,7 +28,7 @@ const SentinelBatches = () => {
     const [total, setTotal] = useState(0);
 
     // ✅ search states
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useState(searchParams.get("search") || "");
     const [debouncedSearch, setDebouncedSearch] = useState("");
 
     // ✅ debounce
@@ -70,13 +71,13 @@ const SentinelBatches = () => {
 
     const BCrumb = [
         { to: "/", title: "Home" },
-        { title: "sentinel-Batches" },
+        { title: "sentinel-Segments" },
     ];
 
     return (
         <>
             <SlimBreadcrumb
-                title="Sentinel Batches"
+                title="Sentinel Segments"
                 items={BCrumb}
             />
 

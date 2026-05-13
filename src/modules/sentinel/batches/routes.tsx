@@ -4,11 +4,11 @@ import SentinelDetailBatch from './details';
 
 const SentinelBatchesRoute: RouteObject[] = [
     {
-        path: '/sentinel-batches',
+        path: '/sentinel-segments',
         element: <SentinelBatches />,
     },
     {
-        path: '/sentinel-batches/:id',
+        path: '/sentinel-segments/segment-details/:segmentCode',
         element: <SentinelDetailBatch />,
     }
 ];

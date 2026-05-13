@@ -1,17 +1,13 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "src/components/ui/table";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "src/components/ui/tooltip";
-
 import { SentinelBatch } from "../services/SentinelBatchesService";
-import { useNavigate } from "react-router";
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "src/components/ui/tooltip";
 interface Props {
     data: SentinelBatch[];
     loading: boolean;
 }
 
-const SEGMENT_WIDTH = 232;
-const TITLE_WIDTH = 300;
-const TITLE_LEFT = SEGMENT_WIDTH;
+const SEGMENT_WIDTH = 130;
 
 const GROUP = {
     dataops: { headerBg: "bg-lightprimary", bodyBg: "bg-lightprimary/30", text: "text-primary", border: "border-primary/30" },
@@ -49,26 +45,10 @@ const stickySegment: React.CSSProperties = {
     zIndex: 20,          // ✅ inline z — wins over everything
 };
 
-const stickyTitle: React.CSSProperties = {
-    position: "sticky",
-    left: `${TITLE_LEFT}px`,
-    width: `${TITLE_WIDTH}px`,
-    minWidth: `${TITLE_WIDTH}px`,
-    maxWidth: `${TITLE_WIDTH}px`,
-    zIndex: 20,          // ✅ inline z — wins over everything
-};
-
 // Lower z for body rows so header rows always win
 const stickySegmentBody: React.CSSProperties = { ...stickySegment, zIndex: 20 };
-const stickyTitleBody: React.CSSProperties = { ...stickyTitle, zIndex: 20 };
 
-const SentinelBatchesTable = ({ data, loading }: Props) => {
-    const navigate = useNavigate();
-
-    const handleNavigate = (segmentCode: string) => {
-        navigate(`/sentinel-segments/segment-details/${segmentCode}`);
-    }
-
+const SentinelBatchDetailsTable = ({ data, loading }: Props) => {
     return (
 
         <div className=" border border-border rounded-md overflow-hidden">
@@ -86,10 +66,7 @@ const SentinelBatchesTable = ({ data, loading }: Props) => {
                         <TableHeader>
                             <TableRow>
                                 <TableHead rowSpan={2} className="text-center font-semibold border-b-2 border-r-2 border-border bg-muted" style={stickySegment}>
-                                    Segment Code
-                                </TableHead>
-                                <TableHead rowSpan={2} className="text-center font-semibold border-b-2 border-r-2 border-border bg-muted" style={stickyTitle}>
-                                    Title
+                                    Batch Code
                                 </TableHead>
                                 <GroupHead label="DataOps" colSpan={3} group="dataops" />
                                 <GroupHead label="Email" colSpan={4} group="email" />
@@ -136,31 +113,21 @@ const SentinelBatchesTable = ({ data, loading }: Props) => {
 
                         <TableBody>
                             {data.map((batch) => (
-                                <TableRow key={batch.segment_code} className="odd:bg-transparent even:bg-muted/50 hover:bg-muted/50">
-                                    <TableCell
-                                        className="font-medium text-primary cursor-pointer text-center border-b border-r-2 border-border bg-background hover:underline"
-                                        style={stickySegmentBody}
-                                        onClick={() => handleNavigate(batch.segment_code)} >
-                                        {batch.campaign_code}_{batch.segment_code}
+                                <TableRow key={batch.segment_code} className="odd:bg-transparent text-left even:bg-muted/50 hover:bg-muted/50">
+                                    <TableCell className="border-b border-r-2 border-border bg-background " style={stickySegmentBody}>
+                                        <TooltipProvider delayDuration={200}>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span className="font-medium cursor-pointer text-primary">
+                                                        {batch.batch_code}
+                                                    </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    Segment Code: {batch.segment_code}
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
                                     </TableCell>
-
-                                    <TableCell className="border-b border-r-2 border-border bg-background" style={stickyTitleBody}>
-                                        {batch.title && batch.title.length > 35 ? (
-                                            <TooltipProvider delayDuration={200}>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <div className="truncate cursor-pointer">
-                                                            {batch.title.slice(0, 35)}...
-                                                        </div>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>{batch.title}</TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
-                                        ) : (
-                                            <div className="truncate">{batch.title || "-"}</div>
-                                        )}
-                                    </TableCell>
-
                                     <GCell isFirst group="dataops">{batch.dataops_total}</GCell>
                                     <GCell group="dataops">{batch.dataops_valid}</GCell>
                                     <GCell group="dataops">{batch.dataops_invalid}</GCell>
@@ -206,4 +173,4 @@ const SentinelBatchesTable = ({ data, loading }: Props) => {
     );
 };
 
-export default SentinelBatchesTable;
+export default SentinelBatchDetailsTable;
