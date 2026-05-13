@@ -2,14 +2,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "s
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "src/components/ui/tooltip";
 
 import { SentinelBatch } from "../services/SentinelBatchesService";
-import { Link } from "react-router";
+import { useNavigate } from "react-router";
 
 interface Props {
     data: SentinelBatch[];
     loading: boolean;
 }
 
-const SEGMENT_WIDTH = 230;
+const SEGMENT_WIDTH = 232;
 const TITLE_WIDTH = 300;
 const TITLE_LEFT = SEGMENT_WIDTH;
 
@@ -63,6 +63,11 @@ const stickySegmentBody: React.CSSProperties = { ...stickySegment, zIndex: 20 };
 const stickyTitleBody: React.CSSProperties = { ...stickyTitle, zIndex: 20 };
 
 const SentinelBatchesTable = ({ data, loading }: Props) => {
+    const navigate = useNavigate();
+
+    const handleNavigate = (segmentCode: string) => {
+        navigate(`/sentinel-batches/${segmentCode}`);
+    }
 
     return (
 
@@ -132,14 +137,13 @@ const SentinelBatchesTable = ({ data, loading }: Props) => {
                         <TableBody>
                             {data.map((batch) => (
                                 <TableRow key={batch.segment_code} className="odd:bg-transparent even:bg-muted/50 hover:bg-muted/50">
-                                    <Link to={`/sentinel-batches/${batch.segment_code}`} className="contents ">
-                                        <TableCell
-                                            className="font-medium text-primary text-center border-b border-r-2 border-border bg-background hover:underline"
-                                            style={stickySegmentBody}>
-                                            {batch.campaign_code}_{batch.segment_code}
-                                        </TableCell>
+                                    <TableCell
+                                        className="font-medium text-primary cursor-pointer text-center border-b border-r-2 border-border bg-background hover:underline"
+                                        style={stickySegmentBody}
+                                        onClick={() => handleNavigate(batch.segment_code)} >
+                                        {batch.campaign_code}_{batch.segment_code}
+                                    </TableCell>
 
-                                    </Link>
                                     <TableCell className="border-b border-r-2 border-border bg-background" style={stickyTitleBody}>
                                         {batch.title && batch.title.length > 35 ? (
                                             <TooltipProvider delayDuration={200}>
