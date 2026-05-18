@@ -7,6 +7,7 @@ import ToasterWithTheme from './components/shared/toast/ToasterWithTheme';
 
 
 function App() {
+  console.log('App rendered');
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <RouterProvider router={router} />
