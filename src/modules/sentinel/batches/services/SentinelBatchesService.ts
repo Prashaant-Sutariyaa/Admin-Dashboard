@@ -66,12 +66,17 @@ export const SentinelBatchesService = {
   },
 
   async uploadSentinelBatch(payload: FormData) {
-    const res = await apiClient.post('/sentinel/jobs/upload',
-      payload,
-      {
-        headers:
-          { 'Content-Type': 'multipart/form-data', }
-      }
+    const res = await apiClient.post('/sentinel/jobs/upload', payload, {
+      headers: { 'Content-Type': 'multipart/form-data', }
+    });
+    return res.data;
+  },
+
+  async exportBatchData(batch_code: string, metric: string, department: string) {
+    const res = await apiClient.get('/sentinel/export/', {
+      params: { batch_code, metric, department },
+      responseType: 'blob',
+    }
     );
 
     return res.data;

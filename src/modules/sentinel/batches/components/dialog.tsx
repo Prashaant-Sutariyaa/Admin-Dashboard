@@ -155,7 +155,7 @@ const ENUM_RULES: Record<string, Record<string, string[]>> = {
             'connected', 'wrong number', 'no response',
             'callback', 'interested', 'not interested',
             'rpc voicemail', 'rpc answering machine',
-            'do not call', 'busy', 'disconnected',
+            'do not call', 'busy', 'disconnected', 'call back later'
         ],
     },
     MIS: {
@@ -462,11 +462,13 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
     const [campaignId, setCampaignId] = useState('');
     const [segmentId, setSegmentId] = useState('');
     const [departmentId, setDepartmentId] = useState('');
+    const [priority, setPriority] = useState('Normal');
     const [file, setFile] = useState<File | null>(null);
     const [headerValidation, setHeaderValidation] = useState<HeaderValidation | null>(null);
     const [rowValidation, setRowValidation] = useState<RowValidationResult | null>(null);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
 
     const currentDepartment = localStorage.getItem('Department') || '';
     const selectedDepartment = departments.find((d) => String(d.id) === departmentId);
@@ -531,6 +533,7 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
 
     useEffect(() => {
         if (!open) {
+            setPriority('Normal');
             setCampaignId('');
             setSegmentId('');
             setDepartmentId('');
@@ -546,6 +549,8 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
         setFile(null);
         setHeaderValidation(null);
         setRowValidation(null);
+        setCampaignId('');   // ✅ add this
+    setSegmentId('');    // ✅ add this
     }, [departmentId]);
 
     const processFile = async (selected: File) => {
@@ -628,26 +633,28 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
     };
 
     const handleUpload = async () => {
+
         if (!headerValidation?.valid || !rowValidation || !rowValidation.canUpload || !file || !selectedDepartment) {
             return;
         }
         try {
             setLoading(true);
-            const selectedCampaign = campaigns.find((c) => String(c.id) === campaignId);
-            const selectedSegment = segments.find((s) => String(s.id) === segmentId);
-            if (!selectedCampaign || !selectedSegment) {
-                toast.error('Invalid campaign or segment selection');
-                return;
-            }
-
             const formData = new FormData();
-
-            // department name
+            // ✅ required for all
             formData.append('department', selectedDepartment.name);
-            // array values
-            formData.append('campaign_codes', selectedCampaign.code ?? '');
-            formData.append('segment_codes', selectedSegment.segment_code);
-            // file
+            // ✅ DataOps only
+            if (shouldShowCampaignFields) {
+                const selectedCampaign = campaigns.find((c) => String(c.id) === campaignId);
+                const selectedSegment = segments.find((s) => String(s.id) === segmentId);
+                if (!selectedCampaign || !selectedSegment) {
+                    toast.error('Invalid campaign or segment selection');
+                    return;
+                }
+                formData.append('campaign_code', selectedCampaign.code ?? '');
+                formData.append('segment_code', selectedSegment.segment_code);
+                formData.append('priority', priority);
+            }
+            // ✅ file
             formData.append('file', file);
             await SentinelBatchesService.uploadSentinelBatch(formData);
             toast.success('Batch uploaded successfully');
@@ -658,7 +665,9 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
                 error?.response?.data?.message ||
                 'Upload failed'
             );
+
         } finally {
+
             setLoading(false);
         }
     };
@@ -672,10 +681,16 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
         );
     };
 
+const shouldShowCampaignFields = selectedDepartment?.name === 'DataOps';
+
     const isDisabled =
-        !campaignId || !segmentId || !departmentId || !file ||
-        !headerValidation?.valid || !rowValidation?.canUpload ||
-        validating || loading;
+        (shouldShowCampaignFields && (!campaignId || !segmentId)) ||
+        !departmentId ||
+        !file ||
+        !headerValidation?.valid ||
+        !rowValidation?.canUpload ||
+        validating ||
+        loading;
 
     // ── Derived for header area ───────────────────────────────
     const showRowSummaryInHeader = headerValidation?.valid && rowValidation;
@@ -740,44 +755,64 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
                 {/* ── BODY — scrollable ── */}
                 <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
 
-                    {/* Campaign + Segment */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div className="space-y-2">
-                            <Label>Campaign</Label>
-                            <AutoComplete
-                                value={campaignId}
-                                onChange={(value) => setCampaignId(value)}
-                                placeholder="Select campaign"
-                                options={campaigns.map((c) => ({
-                                    label: `${c.code} - ${c.campaign_name}`,
-                                    value: String(c.id),
-                                }))}
-                            />
+                    {/* DataOps Only */}
+                    {shouldShowCampaignFields && (
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+                            {/* Campaign */}
+                            <div className="space-y-2">
+                                <Label>Campaign</Label>
+                                <AutoComplete
+                                    value={campaignId}
+                                    onChange={(value) =>
+                                        setCampaignId(value)
+                                    }
+                                    placeholder="Select campaign"
+                                    options={campaigns.map((c) => ({
+                                        label: `${c.code} - ${c.campaign_name}`,
+                                        value: String(c.id),
+                                    }))}
+                                />
+                            </div>
+
+                            {/* Segment */}
+                            <div className="space-y-2">
+                                <Label>Campaign Segment</Label>
+                                <AutoComplete
+                                    value={segmentId}
+                                    onChange={setSegmentId}
+                                    placeholder="Select segment"
+                                    options={segments.map((s) => ({
+                                        label: `${s.segment_code} - ${s.title}`,
+                                        value: String(s.id),
+                                    }))}
+                                    disabled={!campaignId}
+                                />
+
+                            </div>
+
+                            {/* Priority */}
+                            <div className="space-y-2">
+                                <Label>Priority</Label>
+                                <Select value={priority} onValueChange={setPriority} >
+                                    <SelectTrigger className="w-full h-11">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Normal">Normal</SelectItem>
+                                        <SelectItem value="High">High</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Campaign Segment</Label>
-                            <AutoComplete
-                                value={segmentId}
-                                onChange={setSegmentId}
-                                placeholder="Select segment"
-                                options={segments.map((s) => ({
-                                    label: `${s.segment_code} - ${s.title}`,
-                                    value: String(s.id),
-                                }))}
-                                disabled={!campaignId}
-                            />
-                        </div>
-                    </div>
+                    )}
 
                     {/* Department + Sample CSV */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="space-y-2">
                             <Label>Department</Label>
-                            <Select
-                                value={departmentId}
-                                onValueChange={setDepartmentId}
-                                disabled={disableDepartmentSelect}
-                            >
+                            <Select value={departmentId} onValueChange={setDepartmentId} disabled={disableDepartmentSelect} >
                                 <SelectTrigger className="w-full h-11">
                                     <SelectValue placeholder="Select department" />
                                 </SelectTrigger>
