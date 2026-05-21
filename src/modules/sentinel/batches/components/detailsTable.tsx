@@ -55,8 +55,8 @@ const SentinelBatchDetailsTable = ({ data, loading }: Props) => {
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
-        } catch {
-            toast.error('Failed to download CSV');
+        } catch (error) {
+             console.error("Download failed:", error);
         }
     };
     const GCell = ({ children, isFirst = false, group, className = "", metric, department, batchCode }: {

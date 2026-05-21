@@ -42,7 +42,7 @@ const SentinelDetailBatch = () => {
 
     const BCrumb = [
         { to: "/", title: "Home" },
-        { to: "/sentinel-batches", title: "Sentinel Batches" },
+        { to: "/sentinel-segments", title: "Sentinel Batches" },
         { title: "Details" },
     ];
 

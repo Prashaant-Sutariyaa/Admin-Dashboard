@@ -69,6 +69,16 @@ interface RowValidationResult {
     canUpload: boolean;
     invalidRowData: { headers: string[]; rows: string[][] };
 }
+interface DispositionResponse {
+    data: {
+        id: number;
+        disposition_code: string;
+        call_disposition: string;
+    }[];
+}
+
+const normalizeKey = (...values: string[]) =>
+    values.map((v) => v.trim().toLowerCase()).join('__');
 
 // ── Constants ─────────────────────────────────────────────────
 
@@ -150,14 +160,6 @@ const ENUM_RULES: Record<string, Record<string, string[]>> = {
     DBR: {
         'dbr status': ['yes', 'no'],
     },
-    VV: {
-        'vv disposition': [
-            'connected', 'wrong number', 'no response',
-            'callback', 'interested', 'not interested',
-            'rpc voicemail', 'rpc answering machine',
-            'do not call', 'busy', 'disconnected', 'call back later'
-        ],
-    },
     MIS: {
         'mis status': [
             'rtd', 'tbd', 'delivered', 'accepted',
@@ -203,7 +205,7 @@ const isEmpty = (value: string): boolean =>
     value === '' || value.trim() === '' || value.trim() === '-';
 
 const isValidPersonalLinkedIn = (url: string): boolean =>
-    /^(https?:\/\/)?(www\.)?linkedin\.com\/in\/.+/i.test(url.trim());
+    /^(https?:\/\/)?(www\.)?linkedin\.com\/(in|company)\/.+/i.test(url.trim());
 
 const cleanText = (text: string): string =>
     text.replace(/^\uFEFF/, '').replace(/\r/g, '');
@@ -284,9 +286,20 @@ const validateRows = (
     deptKey: string,
     headers: string[],
     rows: string[][],
+    vvDispositions: string[] = [],
 ): RowValidationResult => {
+
     const mandatoryHeaders = MANDATORY_HEADERS[deptKey] ?? [];
-    const enumRules = ENUM_RULES[deptKey] ?? {};
+
+    const enumRules = {
+        ...(ENUM_RULES[deptKey] ?? {}),
+        ...(deptKey === 'VV'
+            ? {
+                'vv disposition': vvDispositions,
+            }
+            : {}),
+    };
+
     const conditionalRules = CONDITIONAL_REQUIRED[deptKey] ?? [];
     const linkedInField = LINKEDIN_PERSONAL_FIELD[deptKey] ?? null;
 
@@ -295,6 +308,8 @@ const validateRows = (
         'Invalid email format': 0,
         'Invalid enum value': 0,
         'Duplicate work email': 0,
+        'Duplicate FN + LN + Domain': 0,
+        'Duplicate FN + LN + Company': 0,
     };
 
     if (linkedInField) {
@@ -302,49 +317,183 @@ const validateRows = (
         issueCounts['Duplicate LinkedIn URL'] = 0;
     }
 
-    conditionalRules.forEach((r) => { issueCounts[r.label] = 0; });
+    conditionalRules.forEach((r) => {
+        issueCounts[r.label] = 0;
+    });
 
     const emailColIdx = headers.indexOf('work email');
     const batchColIdx = headers.indexOf('batch id');
     const linkedInColIdx = linkedInField ? headers.indexOf(linkedInField) : -1;
 
+    const firstNameColIdx = headers.indexOf('first name');
+    const lastNameColIdx = headers.indexOf('last name');
+    const domainColIdx = headers.indexOf('domain');
+    const companyColIdx = headers.indexOf('tal company name');
+
     const duplicateEmailKeys = new Set<string>();
     const duplicateLinkedInKeys = new Set<string>();
+    const duplicateFnLnDomainKeys = new Set<string>();
+    const duplicateFnLnCompanyKeys = new Set<string>();
+
+    // ─────────────────────────────────────────────────────────
+    // WORK EMAIL DUPLICATES
+    // ─────────────────────────────────────────────────────────
 
     if (emailColIdx !== -1) {
         const freq: Record<string, number> = {};
+
         rows.forEach((row) => {
             const email = (row[emailColIdx] ?? '').trim().toLowerCase();
-            const batchId = batchColIdx !== -1 ? (row[batchColIdx] ?? '').trim().toLowerCase() : '';
+
+            const batchId =
+                batchColIdx !== -1
+                    ? (row[batchColIdx] ?? '').trim().toLowerCase()
+                    : '';
+
             if (!email) return;
-            const key = deptKey === 'DataOps' ? email : `${batchId}__${email}`;
+
+            const key =
+                deptKey === 'DataOps'
+                    ? email
+                    : `${batchId}__${email}`;
+
             freq[key] = (freq[key] ?? 0) + 1;
         });
+
         Object.entries(freq).forEach(([key, count]) => {
-            if (count > 1) duplicateEmailKeys.add(key);
+            if (count > 1) {
+                duplicateEmailKeys.add(key);
+            }
         });
     }
+
+    // ─────────────────────────────────────────────────────────
+    // LINKEDIN DUPLICATES
+    // ─────────────────────────────────────────────────────────
 
     if (linkedInField && linkedInColIdx !== -1) {
         const freq: Record<string, number> = {};
+
         rows.forEach((row) => {
-            const val = (row[linkedInColIdx] ?? '').trim().toLowerCase();
+            const val = (row[linkedInColIdx] ?? '')
+                .trim()
+                .toLowerCase();
+
             if (!val) return;
+
             freq[val] = (freq[val] ?? 0) + 1;
         });
+
         Object.entries(freq).forEach(([val, count]) => {
-            if (count > 1) duplicateLinkedInKeys.add(val);
+            if (count > 1) {
+                duplicateLinkedInKeys.add(val);
+            }
         });
     }
 
+    // ─────────────────────────────────────────────────────────
+    // FN + LN + DOMAIN DUPLICATES
+    // ─────────────────────────────────────────────────────────
+
+    if (
+        firstNameColIdx !== -1 &&
+        lastNameColIdx !== -1 &&
+        domainColIdx !== -1
+    ) {
+        const freq: Record<string, number> = {};
+
+        rows.forEach((row) => {
+            const firstName = (row[firstNameColIdx] ?? '')
+                .trim()
+                .toLowerCase();
+
+            const lastName = (row[lastNameColIdx] ?? '')
+                .trim()
+                .toLowerCase();
+
+            const domain = (row[domainColIdx] ?? '')
+                .trim()
+                .toLowerCase();
+
+            if (!firstName || !lastName || !domain) return;
+
+            const key = normalizeKey(
+                firstName,
+                lastName,
+                domain,
+            );
+
+            freq[key] = (freq[key] ?? 0) + 1;
+        });
+
+        Object.entries(freq).forEach(([key, count]) => {
+            if (count > 1) {
+                duplicateFnLnDomainKeys.add(key);
+            }
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // FN + LN + COMPANY DUPLICATES
+    // ─────────────────────────────────────────────────────────
+
+    if (
+        firstNameColIdx !== -1 &&
+        lastNameColIdx !== -1 &&
+        companyColIdx !== -1
+    ) {
+        const freq: Record<string, number> = {};
+
+        rows.forEach((row) => {
+            const firstName = (row[firstNameColIdx] ?? '')
+                .trim()
+                .toLowerCase();
+
+            const lastName = (row[lastNameColIdx] ?? '')
+                .trim()
+                .toLowerCase();
+
+            const company = (row[companyColIdx] ?? '')
+                .trim()
+                .toLowerCase();
+
+            if (!firstName || !lastName || !company) return;
+
+            const key = normalizeKey(
+                firstName,
+                lastName,
+                company,
+            );
+
+            freq[key] = (freq[key] ?? 0) + 1;
+        });
+
+        Object.entries(freq).forEach(([key, count]) => {
+            if (count > 1) {
+                duplicateFnLnCompanyKeys.add(key);
+            }
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // ROW VALIDATION
+    // ─────────────────────────────────────────────────────────
+
     let validRows = 0;
+
     const invalidRowIndices = new Set<number>();
 
     rows.forEach((row, rowIndex) => {
+
         const rowMap: Record<string, string> = {};
-        headers.forEach((h, i) => { rowMap[h] = row[i] ?? ''; });
+
+        headers.forEach((h, i) => {
+            rowMap[h] = row[i] ?? '';
+        });
 
         let rowHasIssue = false;
+
+        // REQUIRED FIELDS
 
         for (const field of mandatoryHeaders) {
             if (isEmpty(rowMap[field] ?? '')) {
@@ -354,54 +503,142 @@ const validateRows = (
             }
         }
 
+        // EMAIL FORMAT
+
         const workEmail = (rowMap['work email'] ?? '').trim();
-        if (workEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(workEmail)) {
+
+        if (
+            workEmail &&
+            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(workEmail)
+        ) {
             issueCounts['Invalid email format']++;
             rowHasIssue = true;
         }
 
+        // EMAIL DUPLICATE
+
         if (workEmail) {
-            const batchId = (rowMap['batch id'] ?? '').trim().toLowerCase();
-            const key = deptKey === 'DataOps'
-                ? workEmail.toLowerCase()
-                : `${batchId}__${workEmail.toLowerCase()}`;
+
+            const batchId = (rowMap['batch id'] ?? '')
+                .trim()
+                .toLowerCase();
+
+            const key =
+                deptKey === 'DataOps'
+                    ? workEmail.toLowerCase()
+                    : `${batchId}__${workEmail.toLowerCase()}`;
+
             if (duplicateEmailKeys.has(key)) {
                 issueCounts['Duplicate work email']++;
                 rowHasIssue = true;
             }
         }
 
+        // LINKEDIN VALIDATION
+
         if (linkedInField) {
+
             const linkedin = (rowMap[linkedInField] ?? '').trim();
+
             if (linkedin) {
+
                 if (!isValidPersonalLinkedIn(linkedin)) {
                     issueCounts['Invalid LinkedIn URL']++;
                     rowHasIssue = true;
-                } else if (duplicateLinkedInKeys.has(linkedin.toLowerCase())) {
+
+                } else if (
+                    duplicateLinkedInKeys.has(
+                        linkedin.toLowerCase(),
+                    )
+                ) {
                     issueCounts['Duplicate LinkedIn URL']++;
                     rowHasIssue = true;
                 }
             }
         }
 
+        // FN + LN + DOMAIN DUPLICATE
+
+        const firstName = (rowMap['first name'] ?? '')
+            .trim()
+            .toLowerCase();
+
+        const lastName = (rowMap['last name'] ?? '')
+            .trim()
+            .toLowerCase();
+
+        const domain = (rowMap['domain'] ?? '')
+            .trim()
+            .toLowerCase();
+
+        const company = (rowMap['tal company name'] ?? '')
+            .trim()
+            .toLowerCase();
+
+        if (firstName && lastName && domain) {
+
+            const key = normalizeKey(
+                firstName,
+                lastName,
+                domain,
+            );
+
+            if (duplicateFnLnDomainKeys.has(key)) {
+                issueCounts['Duplicate FN + LN + Domain']++;
+                rowHasIssue = true;
+            }
+        }
+
+        // FN + LN + COMPANY DUPLICATE
+
+        if (firstName && lastName && company) {
+
+            const key = normalizeKey(
+                firstName,
+                lastName,
+                company,
+            );
+
+            if (duplicateFnLnCompanyKeys.has(key)) {
+                issueCounts['Duplicate FN + LN + Company']++;
+                rowHasIssue = true;
+            }
+        }
+
+        // ENUM VALIDATION
+
         for (const [col, allowed] of Object.entries(enumRules)) {
+
             const cellVal = (rowMap[col] ?? '').trim();
-            if (cellVal && !allowed.includes(cellVal.toLowerCase())) {
+
+            if (
+                cellVal &&
+                !allowed.includes(cellVal.toLowerCase())
+            ) {
                 issueCounts['Invalid enum value']++;
                 rowHasIssue = true;
                 break;
             }
         }
 
+        // CONDITIONAL REQUIRED
+
         for (const rule of conditionalRules) {
-            const triggerVal = (rowMap[rule.triggerCol] ?? '').trim().toLowerCase();
+
+            const triggerVal = (rowMap[rule.triggerCol] ?? '')
+                .trim()
+                .toLowerCase();
+
             if (rule.triggerValues.includes(triggerVal)) {
+
                 if (isEmpty(rowMap[rule.requiredCol] ?? '')) {
                     issueCounts[rule.label]++;
                     rowHasIssue = true;
                 }
             }
         }
+
+        // FINAL RESULT
 
         if (rowHasIssue) {
             invalidRowIndices.add(rowIndex);
@@ -411,18 +648,31 @@ const validateRows = (
     });
 
     const totalRows = rows.length;
+
     const invalidRows = totalRows - validRows;
 
     const issues = Object.entries(issueCounts)
         .filter(([, count]) => count > 0)
-        .map(([label, count]) => ({ label, count }));
+        .map(([label, count]) => ({
+            label,
+            count,
+        }));
 
     const invalidRowData = {
         headers,
-        rows: rows.filter((_, i) => invalidRowIndices.has(i)),
+        rows: rows.filter((_, i) =>
+            invalidRowIndices.has(i),
+        ),
     };
 
-    return { totalRows, validRows, invalidRows, issues, canUpload: validRows > 0, invalidRowData };
+    return {
+        totalRows,
+        validRows,
+        invalidRows,
+        issues,
+        canUpload: validRows > 0,
+        invalidRowData,
+    };
 };
 
 // ── Download invalid rows ─────────────────────────────────────
@@ -459,6 +709,7 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [segments, setSegments] = useState<Segment[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
+    const [vvDispositions, setVvDispositions] = useState<string[]>([]);
     const [campaignId, setCampaignId] = useState('');
     const [segmentId, setSegmentId] = useState('');
     const [departmentId, setDepartmentId] = useState('');
@@ -485,11 +736,18 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
     const loadInitialData = async () => {
         try {
             setLoading(true);
-            const [campaignRes, departmentRes] = await Promise.all([
+            const [campaignRes, departmentRes, dispositionsRes] = await Promise.all([
                 campaignService.getAllCampaigns(),
                 departmentService.getActiveDepartmentsList(),
+                SentinelBatchesService.getDispostionsData(),
             ]);
             setCampaigns(campaignRes || []);
+            const vvDispositionList =
+                (dispositionsRes?.data || []).map(
+                    (item: any) => item.call_disposition.toLowerCase()
+                );
+
+            setVvDispositions(vvDispositionList);
 
             const allDepartments = departmentRes || [];
             let allowedDepartments: string[] = [];
@@ -530,7 +788,7 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
             setSegments([]);
         }
     };
-
+    
     useEffect(() => {
         if (!open) {
             setPriority('Normal');
@@ -550,7 +808,7 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
         setHeaderValidation(null);
         setRowValidation(null);
         setCampaignId('');   // ✅ add this
-    setSegmentId('');    // ✅ add this
+        setSegmentId('');    // ✅ add this
     }, [departmentId]);
 
     const processFile = async (selected: File) => {
@@ -589,7 +847,7 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
             setHeaderValidation(hResult);
 
             if (hResult.valid) {
-                const rResult = validateRows(deptKey, uploadedHeaders, rows);
+                const rResult = validateRows(deptKey, uploadedHeaders, rows, vvDispositions);
                 setRowValidation(rResult);
 
                 if (rResult.invalidRows === 0) {
@@ -681,7 +939,7 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
         );
     };
 
-const shouldShowCampaignFields = selectedDepartment?.name === 'DataOps';
+    const shouldShowCampaignFields = selectedDepartment?.name === 'DataOps';
 
     const isDisabled =
         (shouldShowCampaignFields && (!campaignId || !segmentId)) ||
