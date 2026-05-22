@@ -1,7 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "src/components/ui/table";
 import { SentinelBatch, SentinelBatchesService } from "../services/SentinelBatchesService";
 import { Download } from "lucide-react";
-import { toast } from "sonner";
 interface Props {
     data: SentinelBatch[];
     loading: boolean;

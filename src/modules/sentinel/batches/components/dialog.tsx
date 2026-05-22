@@ -70,13 +70,7 @@ interface RowValidationResult {
     canUpload: boolean;
     invalidRowData: { headers: string[]; rows: string[][] };
 }
-interface DispositionResponse {
-    data: {
-        id: number;
-        disposition_code: string;
-        call_disposition: string;
-    }[];
-}
+
 
 const normalizeKey = (...values: string[]) =>
     values.map((v) => v.trim().toLowerCase()).join('__');

@@ -9,8 +9,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from 'src/components/ui/select';
-import { Calendar } from 'src/components/ui/calendar';
-import { format } from 'date-fns';
 
 import { Icon } from '@iconify/react';
 import { toast } from 'sonner';
