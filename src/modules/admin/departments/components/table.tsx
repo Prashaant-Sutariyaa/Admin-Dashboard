@@ -11,7 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from 'src/components/ui/tooltip';
-import Can from 'src/permissions/Can';
+import Can from 'src/permissions/CanPermission';
 
 interface DepartmentUI {
   id: number;

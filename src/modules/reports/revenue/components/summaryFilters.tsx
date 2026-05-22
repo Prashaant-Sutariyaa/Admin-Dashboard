@@ -9,7 +9,7 @@ import { Button } from "src/components/ui/button";
 import { DateRange } from "react-day-picker";
 
 import DateRangePicker from "src/components/ui/DateRangePicker";
-import Can from "src/permissions/Can";
+import Can from "src/permissions/CanPermission";
 
 interface Props {
     range: DateRange | undefined;

@@ -17,7 +17,7 @@ import {
   departmentService,
   Department,
 } from 'src/modules/admin/departments/services/departmentService';
-import Can from 'src/permissions/Can';
+import Can from 'src/permissions/CanPermission';
 import { Button } from 'src/components/ui/button';
 
 const UsersList = () => {

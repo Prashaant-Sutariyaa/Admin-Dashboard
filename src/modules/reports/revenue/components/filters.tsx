@@ -23,7 +23,7 @@ import { CAMPAIGN_STATUS_OPTIONS } from "src/config/constant-data/campaignOption
 import DateRangePicker from "src/components/ui/DateRangePicker";
 import { toApiDate } from "src/utils/toApiDate";
 import MultiSelect from "src/components/ui/Multiselect";
-import Can from "src/permissions/Can";
+import Can from "src/permissions/CanPermission";
 
 interface Props {
     clients: { label: string; value: string; }[];

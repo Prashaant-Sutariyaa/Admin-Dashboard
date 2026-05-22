@@ -13,7 +13,7 @@ import { Download } from 'lucide-react';
 
 import img from 'src/assets/images/dashboard/campaign.png';
 import DetailsTable from './components/detailsTable';
-import Can from 'src/permissions/Can';
+import Can from 'src/permissions/CanPermission';
 
 const CampaignDetails = () => {
   const { id } = useParams();

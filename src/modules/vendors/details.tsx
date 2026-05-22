@@ -13,7 +13,7 @@ import {
 import { Button } from 'src/components/ui/button';
 import { vendorService, Vendor } from './services/vendorService';
 import companyImg from 'src/assets/images/dashboard/vendor.png';
-import Can from 'src/permissions/Can';
+import Can from 'src/permissions/CanPermission';
 import StatusBadge from 'src/components/shared/status-badges/StatusBadge';
 
 const VendorDetails = () => {

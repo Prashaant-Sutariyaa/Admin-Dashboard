@@ -25,7 +25,7 @@ import { userService, User } from 'src/modules/users/services/userService';
 
 import { capitalizeFirst } from 'src/utils/format';
 import StatusBadge from 'src/components/shared/status-badges/StatusBadge';
-import Can from 'src/permissions/Can';
+import Can from 'src/permissions/CanPermission';
 
 interface Props {
   vendors: Vendor[];

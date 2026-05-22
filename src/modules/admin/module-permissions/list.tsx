@@ -28,7 +28,7 @@ import { toast } from 'sonner';
 
 import { Icon } from '@iconify/react';
 
-import Can from 'src/permissions/Can';
+import Can from 'src/permissions/CanPermission';
 
 const ModulePermissionsList = () => {
 

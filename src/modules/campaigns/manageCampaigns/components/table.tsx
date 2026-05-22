@@ -15,7 +15,7 @@ import {
 
 import { Campaign, campaignService } from '../services/campaignService';
 import StatusBadge from 'src/components/shared/status-badges/StatusBadge';
-import Can from 'src/permissions/Can';
+import Can from 'src/permissions/CanPermission';
 import { formatDateShort } from 'src/utils/formatDateShort';
 
 const CampaignTable = ({ campaigns, onEdit, onDelete }: any) => {

@@ -30,7 +30,7 @@ import StatusBadge from 'src/components/shared/status-badges/StatusBadge';
 import { campaignService } from '../services/campaignService';
 import { CAMPAIGN_STATUS_OPTIONS } from 'src/config/constant-data/campaignOptions';
 import { toast } from 'sonner';
-import Can from 'src/permissions/Can';
+import Can from 'src/permissions/CanPermission';
 
 interface Props {
   campaignId: number | undefined;

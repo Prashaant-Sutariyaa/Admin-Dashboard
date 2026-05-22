@@ -11,7 +11,7 @@ import VendorDialog from './components/dialogForm';
 import { vendorService, Vendor } from './services/vendorService';
 import { useConfirm } from 'src/components/shared/confirmdialog/confirm-context';
 import { toast } from 'sonner';
-import Can from 'src/permissions/Can';
+import Can from 'src/permissions/CanPermission';
 
 const VendorList = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);

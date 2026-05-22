@@ -12,7 +12,7 @@ import { clientService, Client } from './services/clientService';
 
 import { useConfirm } from 'src/components/shared/confirmdialog/confirm-context';
 import { toast } from 'sonner';
-import Can from 'src/permissions/Can';
+import Can from 'src/permissions/CanPermission';
 
 const ClientList = () => {
   const [clients, setClients] = useState<Client[]>([]);

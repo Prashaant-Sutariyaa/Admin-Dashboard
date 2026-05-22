@@ -16,7 +16,7 @@ import { userService } from 'src/modules/users/services/userService';
 import { useConfirm } from 'src/components/shared/confirmdialog/confirm-context';
 import { toast } from 'sonner';
 import { Icon } from '@iconify/react';
-import Can from 'src/permissions/Can';
+import Can from 'src/permissions/CanPermission';
 import { Button } from 'src/components/ui/button';
 
 const RolesList = () => {

@@ -15,7 +15,7 @@ import SharedPagination from 'src/components/shared/pagination/SharedPagination'
 
 import { useConfirm } from 'src/components/shared/confirmdialog/confirm-context';
 import { toast } from 'sonner';
-import Can from 'src/permissions/Can';
+import Can from 'src/permissions/CanPermission';
 
 const CampaignList = () => {
 

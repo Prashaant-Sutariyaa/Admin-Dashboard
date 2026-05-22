@@ -23,7 +23,7 @@ import { Role } from 'src/modules/admin/roles/services/rolesService';
 import { Department } from 'src/modules/admin/departments/services/departmentService';
 import StatusBadge from 'src/components/shared/status-badges/StatusBadge';
 import { capitalizeFirst } from 'src/utils/format';
-import Can from 'src/permissions/Can';
+import Can from 'src/permissions/CanPermission';
 
 interface Props {
   users: User[];

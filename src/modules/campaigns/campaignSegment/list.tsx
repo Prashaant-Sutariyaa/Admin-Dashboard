@@ -9,7 +9,7 @@ import { Button } from "src/components/ui/button";
 import { campaignService } from "../manageCampaigns/services/campaignService";
 import { campaignSegmentService } from "./services/campaignSegmentService";
 import { formatDateShort } from "src/utils/formatDateShort";
-import Can from "src/permissions/Can";
+import Can from "src/permissions/CanPermission";
 import AutoComplete from "src/components/ui/AutoComplete";
 
 const CampaignSegmentList = () => {
