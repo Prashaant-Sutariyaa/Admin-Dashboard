@@ -16,12 +16,15 @@ import { Button } from "src/components/ui/button";
 import { Upload } from "lucide-react";
 import SentinelBatchUploadDialog from "./components/dialog";
 import { useSearchParams } from "react-router";
+import { userService } from "src/modules/users/services/userService";
+import { departmentService } from "src/modules/admin/departments/services/departmentService";
 
 const SentinelBatches = () => {
     const [searchParams] = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
     const [batches, setBatches] = useState<SentinelBatch[]>([]);
+    const [currentDepartment, setCurrentDepartment] = useState("");
 
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(10);
@@ -42,6 +45,31 @@ const SentinelBatches = () => {
 
         return () => clearTimeout(timer);
     }, [search]);
+
+    const loadCurrentDepartment = async () => {
+        try {
+
+            const profile = await userService.getProfile();
+
+            const departments =
+                await departmentService.getActiveDepartmentsList();
+
+            const matchedDepartment = departments.find(
+                (d) => d.id === profile.department_id
+            );
+
+            setCurrentDepartment(
+                matchedDepartment?.name || ""
+            );
+
+        } catch (error) {
+
+            console.error(
+                "Failed to load current department",
+                error
+            );
+        }
+    };
 
     const loadData = async () => {
         try {
@@ -64,6 +92,10 @@ const SentinelBatches = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        loadCurrentDepartment();
+    }, []);
 
     useEffect(() => {
         loadData();
@@ -115,7 +147,7 @@ const SentinelBatches = () => {
                 />
 
             </CardBox>
-            <SentinelBatchUploadDialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen} />
+            <SentinelBatchUploadDialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}  currentDepartment={currentDepartment} />
         </>
     );
 };

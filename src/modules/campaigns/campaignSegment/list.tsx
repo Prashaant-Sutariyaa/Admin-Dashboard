@@ -4,14 +4,6 @@ import SlimBreadcrumb from "src/components/shared/breadcrumb/SlimBreadcrumb";
 import CardBox from "src/components/shared/CardBox";
 import CampSegmentTable from "./components/table";
 
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "src/components/ui/select";
-
 import { Button } from "src/components/ui/button";
 
 import { campaignService } from "../manageCampaigns/services/campaignService";

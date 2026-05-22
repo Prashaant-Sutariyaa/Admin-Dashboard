@@ -31,6 +31,7 @@ import { SentinelBatchesService } from "../services/SentinelBatchesService";
 interface Props {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    currentDepartment: string;
 }
 
 interface Campaign {
@@ -703,7 +704,7 @@ const downloadInvalidRowsCSV = (
 
 // ── Component ─────────────────────────────────────────────────
 
-const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
+const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Props) => {
     const [loading, setLoading] = useState(false);
     const [validating, setValidating] = useState(false);
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -721,7 +722,6 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
 
-    const currentDepartment = localStorage.getItem('Department') || '';
     const selectedDepartment = departments.find((d) => String(d.id) === departmentId);
     const sampleFile = selectedDepartment ? CSV_MAP[selectedDepartment.name] : null;
     const sampleFileName = sampleFile ? getSampleFileName(sampleFile) : null;
@@ -788,7 +788,7 @@ const SentinelBatchUploadDialog = ({ open, onOpenChange }: Props) => {
             setSegments([]);
         }
     };
-    
+
     useEffect(() => {
         if (!open) {
             setPriority('Normal');
