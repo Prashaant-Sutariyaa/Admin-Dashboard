@@ -12,6 +12,7 @@ interface SlimBreadcrumbProps {
 }
 
 const SlimBreadcrumb = ({ title, items = [] }: SlimBreadcrumbProps) => {
+  console.log(title)
   return (
     <div className="flex items-center justify-between mb-2">
 

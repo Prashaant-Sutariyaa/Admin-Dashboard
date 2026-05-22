@@ -5,13 +5,13 @@ import { Button } from 'src/components/ui/button';
 import { Pencil, Trash2 } from 'lucide-react';
 import StatusBadge from 'src/components/shared/status-badges/StatusBadge';
 import { capitalizeFirst } from 'src/utils/format';
-import Can from 'src/permissions/Can';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from 'src/components/ui/tooltip';
+import Can from 'src/permissions/Can';
 
 interface DepartmentUI {
   id: number;
