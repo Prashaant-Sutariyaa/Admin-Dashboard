@@ -13,7 +13,7 @@ export interface Department {
 export const departmentService = {
 
   async getDepartments(): Promise<Department[]> {
-    const res = await apiClient.get('/departments');
+    const res = await apiClient.get('/departments/');
 
     return res.data.map((item: any) => ({
       id: item.id,
@@ -45,7 +45,7 @@ export const departmentService = {
   },
 
   async createDepartment(payload: { name: string; is_active: boolean }) {
-    return (await apiClient.post('/departments', payload)).data;
+    return (await apiClient.post('/departments/', payload)).data;
   },
 
   async patchDepartment(id: number, payload: Record<string, any>) {

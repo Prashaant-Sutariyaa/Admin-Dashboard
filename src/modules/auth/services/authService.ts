@@ -24,7 +24,7 @@ export const authService = {
   },
 
   async getUserAccess() {
-    const res = await apiClient.get('/user-access');
+    const res = await apiClient.get('/user-access/');
     return res.data;
   }
 };

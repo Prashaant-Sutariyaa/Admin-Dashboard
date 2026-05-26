@@ -13,7 +13,7 @@ export interface Role {
 export const rolesService = {
 
   async getRoles(): Promise<Role[]> {
-    const res = await apiClient.get('/roles');
+    const res = await apiClient.get('/roles/');
 
     return res.data.map((item: any) => ({
       id: item.id,
@@ -50,7 +50,7 @@ export const rolesService = {
   },
 
   async createRole(payload: { name: string; is_active: boolean }) {
-    return (await apiClient.post('/roles', payload)).data;
+    return (await apiClient.post('/roles/', payload)).data;
   },
 
   async patchRole(id: number, payload: Record<string, any>) {

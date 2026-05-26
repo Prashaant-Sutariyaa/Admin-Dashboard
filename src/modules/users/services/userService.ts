@@ -82,7 +82,7 @@ export const userService = {
   },
 
   async createUser(payload: any) {
-    return (await apiClient.post('/users', payload)).data;
+    return (await apiClient.post('/users/', payload)).data;
   },
 
   async updateUser(id: number, payload: any) {
