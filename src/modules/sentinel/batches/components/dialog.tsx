@@ -141,7 +141,7 @@ const MANDATORY_HEADERS: Record<string, string[]> = {
 
 const ENUM_RULES: Record<string, Record<string, string[]>> = {
     DataOps: {
-        'email validation status': ['valid', 'invalid', 'catch-all', 'unknown'],
+        'email validation status': ['valid', 'invalid', 'catch-all', 'unknown', 'catch_all', 'ok', 'apollo verify'],
     },
     Email: {
         'email status': [
