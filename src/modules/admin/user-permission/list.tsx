@@ -4,13 +4,6 @@ import SlimBreadcrumb from 'src/components/shared/breadcrumb/SlimBreadcrumb';
 
 import { userService } from 'src/modules/users/services/userService';
 import UserPermissionForm from './components/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from 'src/components/ui/select';
 import { Label } from 'src/components/ui/label';
 import AutoComplete from "src/components/ui/AutoComplete";
 
