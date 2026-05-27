@@ -19,11 +19,17 @@ import {
 } from 'src/modules/admin/departments/services/departmentService';
 import Can from 'src/permissions/CanPermission';
 import { Button } from 'src/components/ui/button';
+import SharedPagination from "src/components/shared/pagination/SharedPagination";
 
 const UsersList = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [page, setPage] = useState(1);
+
+  const [limit, setLimit] = useState(20);
+
+  const [total, setTotal] = useState(0);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
@@ -37,20 +43,39 @@ const UsersList = () => {
 
   // ✅ Load all data
   const loadAll = async () => {
-    const [usersData, rolesData, deptData] = await Promise.all([
-      userService.getUsers(),
+
+    const [
+      usersRes,
+      rolesData,
+      deptData,
+    ] = await Promise.all([
+
+      userService.getUsers(
+        page,
+        limit
+      ),
+
       rolesService.getAllRolesList(),
+
       departmentService.getAllDepartmentsList(),
     ]);
 
-    setUsers(usersData);
+    setUsers(
+      usersRes.data || []
+    );
+
+    setTotal(
+      usersRes.total || 0
+    );
+
     setRoles(rolesData);
+
     setDepartments(deptData);
   };
 
   useEffect(() => {
     loadAll();
-  }, []);
+  }, [page, limit]);
 
   // ✅ Create
   const openCreate = () => {
@@ -129,6 +154,18 @@ const UsersList = () => {
           onDelete={handleDelete}
           onChangePassword={handleChangePassword}
           onPermission={handlePermission}
+        />
+        <SharedPagination
+          page={page}
+          limit={limit}
+          total={total}
+
+          onPageChange={setPage}
+
+          onLimitChange={(value) => {
+            setLimit(value);
+            setPage(1);
+          }}
         />
 
       </CardBox>

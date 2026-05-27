@@ -155,7 +155,7 @@ const UsersTable = ({
                   <TableCell className="text-center" onClick={(e) => e.stopPropagation()} >
                     <div className="flex justify-center gap-2">
                       {/* Permissions */}
-                      <Can module="users" actions={['permissions']}>
+                      <Can module="users" action='permissions'>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button

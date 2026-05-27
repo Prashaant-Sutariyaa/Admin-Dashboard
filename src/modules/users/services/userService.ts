@@ -16,28 +16,62 @@ export interface User {
   createdAt: string;
   updatedAt: string;
 }
+export interface UserListResponse {
+  data: User[];
+  page: number;
+  limit: number;
+  total: number;
+}
 
 export const userService = {
 
-  async getUsers(): Promise<User[]> {
-    const res = await apiClient.get('/users/');
+  async getUsers(
+    page = 1,
+    limit = 20
+  ): Promise<UserListResponse> {
 
-    return res.data.map((item: any) => ({
-      id: item.id,
-      firstName: item.first_name,
-      lastName: item.last_name,
-      email: item.email,
-      mobileNumber: item.mobile_number,
-      jobTitle: item.job_title,
-      workLocation: item.work_location,
-      roleId: item.role_id,
-      departmentId: item.department_id,
-      isActive: item.is_active,
-      createdBy: item.created_by,
-      updatedBy: item.updated_by,
-      createdAt: new Date(item.created_at).toLocaleDateString(),
-      updatedAt: new Date(item.updated_at).toLocaleDateString(),
-    }));
+    const res =
+      await apiClient.get(
+        '/users/',
+        {
+          params: {
+            page,
+            limit,
+          },
+        }
+      );
+
+    return {
+      data: res.data.data.map(
+        (item: any) => ({
+          id: item.id,
+          firstName: item.first_name,
+          lastName: item.last_name,
+          email: item.email,
+          mobileNumber: item.mobile_number,
+          jobTitle: item.job_title,
+          workLocation: item.work_location,
+          roleId: item.role_id,
+          departmentId: item.department_id,
+          isActive: item.is_active,
+          createdBy: item.created_by,
+          updatedBy: item.updated_by,
+          createdAt:
+            new Date(
+              item.created_at
+            ).toLocaleDateString(),
+
+          updatedAt:
+            new Date(
+              item.updated_at
+            ).toLocaleDateString(),
+        })
+      ),
+
+      page: res.data.page,
+      limit: res.data.limit,
+      total: res.data.total,
+    };
   },
 
   async getAllUsersList(): Promise<User[]> {

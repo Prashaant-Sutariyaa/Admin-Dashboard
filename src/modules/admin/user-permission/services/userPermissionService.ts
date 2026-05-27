@@ -2,7 +2,7 @@ import apiClient from 'src/services/apiClient';
 
 export const userPermissionService = {
   async get(userId: number) {
-    const res = await apiClient.get(`/user-permissions?user_id=${userId}`);
+    const res = await apiClient.get(`/user-permissions/?user_id=${userId}`);
     return res.data;
   },
 
