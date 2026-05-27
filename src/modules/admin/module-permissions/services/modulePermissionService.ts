@@ -31,7 +31,7 @@ export const modulePermissionService = {
     params?: GetModulePermissionParams
   ): Promise<ModulePermissionResponse> {
 
-    const res = await apiClient.get('/module-permissions', {
+    const res = await apiClient.get('/module-permissions/', {
       params,
     });
 
@@ -73,7 +73,7 @@ export const modulePermissionService = {
   },
 
   async create(payload: any) {
-    return (await apiClient.post('/module-permissions', payload)).data;
+    return (await apiClient.post('/module-permissions/', payload)).data;
   },
 
   async patch(id: number, payload: any) {
