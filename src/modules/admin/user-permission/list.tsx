@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from 'src/components/ui/select';
 import { Label } from 'src/components/ui/label';
+import AutoComplete from "src/components/ui/AutoComplete";
 
 const UserPermissionList = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -44,22 +45,19 @@ const UserPermissionList = () => {
         <div>
           <Label>User</Label>
 
-          <Select
+          <AutoComplete
             value={userId ? String(userId) : ''}
-            onValueChange={(v) => setUserId(Number(v))}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select User" />
-            </SelectTrigger>
-
-            <SelectContent>
-              {users.map((u) => (
-                <SelectItem key={u.id} value={String(u.id)}>
-                  {u.email}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(value) =>
+              setUserId(
+                value ? Number(value) : null
+              )
+            }
+            placeholder="Select User"
+            options={users.map((u) => ({
+              label: u.email,
+              value: String(u.id),
+            }))}
+          />
         </div>
 
         {/* Context */}

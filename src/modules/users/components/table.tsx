@@ -67,16 +67,12 @@ const UsersTable = ({
               <TableHead className="text-center">User ID</TableHead>
               <TableHead className="text-center">First Name</TableHead>
               <TableHead className="text-center">Email</TableHead>
-              <TableHead className="text-center">Mobile</TableHead>
               <TableHead className="text-center">Job Title</TableHead>
               <TableHead className="text-center">Role</TableHead>
               <TableHead className="text-center">Department</TableHead>
               <TableHead className="text-center">Status</TableHead>
               <TableHead className="text-center">Password</TableHead>
-              <Can module="users" actions={['permissions']}>
-                <TableHead className="text-center">Permissions</TableHead>
-              </Can>
-              <Can module="users" actions={['edit', 'delete']}>
+              <Can module="users" actions={['edit', 'delete', 'permissions']}>
                 <TableHead className="text-center">Actions</TableHead>
               </Can>
             </TableRow>
@@ -112,11 +108,6 @@ const UsersTable = ({
                   {/* Email */}
                   <TableCell className="text-center">
                     {user.email}
-                  </TableCell>
-
-                  {/* Mobile */}
-                  <TableCell className="text-center">
-                    {user.mobileNumber}
                   </TableCell>
 
                   {/* Job */}
@@ -160,33 +151,24 @@ const UsersTable = ({
                     </Tooltip>
                   </TableCell>
 
-                  {/* Permissions */}
-                  <Can module="users" actions={['permissions']}>
-                    <TableCell
-                      className="text-center"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onPermission(user)}
-                          >
-                            <ShieldCheck className="size-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Manage Permissions</TooltipContent>
-                      </Tooltip>
-                    </TableCell>
-                  </Can>
-
                   {/* Actions */}
-                  <TableCell
-                    className="text-center"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <TableCell className="text-center" onClick={(e) => e.stopPropagation()} >
                     <div className="flex justify-center gap-2">
+                      {/* Permissions */}
+                      <Can module="users" actions={['permissions']}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onPermission(user)}
+                            >
+                              <ShieldCheck className="size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Manage Permissions</TooltipContent>
+                        </Tooltip>
+                      </Can>
                       <Can module="users" action="edit">
                         <Tooltip>
                           <TooltipTrigger asChild>

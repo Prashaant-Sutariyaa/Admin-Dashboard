@@ -59,7 +59,6 @@ const UserDetails = () => {
   if (!user) {
     return <p className="text-muted-foreground">User not found</p>;
   }
-
   return (
     <>
       <SlimBreadcrumb title="User Details" items={BCrumb} />
@@ -77,11 +76,10 @@ const UserDetails = () => {
             />
 
             <div className="flex flex-col text-center sm:text-left gap-1">
-              {/* ❌ removed username */}
               <h5 className="card-title">{user.email}</h5>
 
               <p className="text-sm text-muted-foreground">
-                {capitalizeFirst(user.jobTitle)} • {user.workLocation}
+                {capitalizeFirst(user.jobTitle)} • {user.workLocation || "N/A"}
               </p>
 
               <p className="text-xs text-muted-foreground">
@@ -141,7 +139,7 @@ const UserDetails = () => {
 
               <div>
                 <p className="text-muted-foreground text-xs">Location</p>
-                <p>{user.workLocation}</p>
+                <p>{user.workLocation || "N/A"}</p>
               </div>
 
               <div>

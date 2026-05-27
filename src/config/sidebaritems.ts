@@ -176,13 +176,13 @@ const SidebarContent: MenuItem[] = [
             url: '/sentinel-segments',
             module: 'sentinel'
           },
-          {
-            id: uniqueId(),
-            name: 'Jobs',
-            icon: 'lucide:circle-play',
-            url: '/sentinel-jobs',
-            module: 'sentinel'
-          },
+          // {
+          //   id: uniqueId(),
+          //   name: 'Jobs',
+          //   icon: 'lucide:circle-play',
+          //   url: '/sentinel-jobs',
+          //   module: 'sentinel'
+          // },
         ],
       },
     ],

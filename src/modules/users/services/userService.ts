@@ -14,6 +14,7 @@ export interface User {
   createdBy: number;
   updatedBy: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 export const userService = {
@@ -35,6 +36,7 @@ export const userService = {
       createdBy: item.created_by,
       updatedBy: item.updated_by,
       createdAt: new Date(item.created_at).toLocaleDateString(),
+      updatedAt: new Date(item.updated_at).toLocaleDateString(),
     }));
   },
 
@@ -78,6 +80,7 @@ export const userService = {
       createdBy: item.created_by,
       updatedBy: item.updated_by,
       createdAt: new Date(item.created_at).toLocaleDateString(),
+      updatedAt: new Date(item.updated_at).toLocaleDateString(),
     };
   },
 

@@ -271,7 +271,7 @@ const UserForm = ({ mode, initialData, onSuccess }: Props) => {
               <SelectValue placeholder="Select role" />
             </SelectTrigger>
             <SelectContent>
-              {roles.map((r) => (
+              {roles.filter((r) => r.name !== 'CEO').map((r) => (
                 <SelectItem key={r.id} value={String(r.id)}>
                   {r.name}
                 </SelectItem>
