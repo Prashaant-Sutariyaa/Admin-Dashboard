@@ -24,7 +24,7 @@ const ChangePasswordDialog = ({ open, onClose, userId }: Props) => {
   const [confirm, setConfirm] = useState('');
   const [show, setShow] = useState(false);
 
-  const regex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
+  const regex = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
 
   const handleSubmit = async () => {
     if (!regex.test(password)) {

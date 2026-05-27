@@ -20,7 +20,7 @@ export interface User {
 export const userService = {
 
   async getUsers(): Promise<User[]> {
-    const res = await apiClient.get('/users');
+    const res = await apiClient.get('/users/');
 
     return res.data.map((item: any) => ({
       id: item.id,
