@@ -36,13 +36,22 @@ const CampSegmentTable = ({ originalSegments, campaignId, campaign, segments, se
         const updated = [...segments];
         if (['allocation', 'delivered', 'accepted', 'rejected'].includes(field)) {
             let numericValue = Number(value);
+            numericValue = Math.max(0, numericValue);
+            // ✅ accepted cannot exceed delivered
             if (field === 'accepted') {
                 const delivered = Number(updated[index].delivered || 0);
                 numericValue = Math.min(numericValue, delivered);
             }
             updated[index][field] = numericValue;
-        }
-        else {
+            // ✅ if delivered reduced below accepted
+            if (field === 'delivered') {
+                const delivered = numericValue;
+                const accepted = Number(updated[index].accepted || 0);
+                if (accepted > delivered) {
+                    updated[index].accepted = delivered;
+                }
+            }
+        } else {
             updated[index][field] = value;
         }
         setSegments(updated);
