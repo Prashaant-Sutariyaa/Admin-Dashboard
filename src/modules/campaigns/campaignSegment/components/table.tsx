@@ -1,18 +1,8 @@
-import {
-    Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-} from 'src/components/ui/table';
-
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from 'src/components/ui/table';
 import { Button } from 'src/components/ui/button';
 import { Input } from 'src/components/ui/input';
-import {
-    Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-} from 'src/components/ui/select';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "src/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'src/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "src/components/ui/tooltip";
 import { Trash2, Plus } from 'lucide-react';
 import StatusBadge from 'src/components/shared/status-badges/StatusBadge';
 import { CAMPAIGN_STATUS_OPTIONS } from 'src/config/constant-data/campaignOptions';
@@ -22,7 +12,7 @@ import { campaignSegmentService } from '../services/campaignSegmentService';
 import { formatDateShort } from 'src/utils/formatDateShort';
 import UnrealizedReasonDialog from "./dialog";
 import { useState } from 'react';
-
+import { campaignService } from "../../manageCampaigns/services/campaignService";
 interface Props {
     campaignId: number | undefined;
     campaign: any;
@@ -31,40 +21,34 @@ interface Props {
     isEditing: boolean;
     setIsEditing: (v: boolean) => void;
     originalSegments: any[];
+    setSelectedCampaign: (data: any) => void;
 }
 
-const CampSegmentTable = ({
-    originalSegments,
-    campaignId,
-    campaign,
-    segments,
-    setSegments,
-    isEditing,
-    setIsEditing
-}: Props) => {
+const CampSegmentTable = ({ originalSegments, campaignId, campaign, segments, setSegments, isEditing, setIsEditing, setSelectedCampaign }: Props) => {
 
     const confirm = useConfirm();
     const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
-
     const [pendingRows, setPendingRows] = useState<any[]>([]);
     const getDeficit = (row: any) => Number(row.allocation || 0) - Number(row.accepted || 0);
-
     const getTBD = (row: any) => Number(row.delivered || 0) - (Number(row.accepted || 0) + Number(row.rejected || 0));
 
     const handleChange = (index: number, field: string, value: any) => {
         const updated = [...segments];
-
         if (['allocation', 'delivered', 'accepted', 'rejected'].includes(field)) {
-            updated[index][field] = Number(value);
-        } else {
+            let numericValue = Number(value);
+            if (field === 'accepted') {
+                const delivered = Number(updated[index].delivered || 0);
+                numericValue = Math.min(numericValue, delivered);
+            }
+            updated[index][field] = numericValue;
+        }
+        else {
             updated[index][field] = value;
         }
-
         setSegments(updated);
     };
 
     const handleAddRow = () => {
-
         setSegments([
             ...segments,
             {
@@ -80,7 +64,6 @@ const CampSegmentTable = ({
             }
         ]);
     };
-
     const handleDelete = async (index: number) => {
         const ok = await confirm({
             title: 'Remove segment?',
@@ -90,120 +73,80 @@ const CampSegmentTable = ({
         });
 
         if (!ok) return;
-
         const updated = [...segments];
         updated.splice(index, 1);
         setSegments(updated);
     };
 
-const handleSave = async (
-    updatedSegments?: any[]
-) => {
+    const handleSave = async (updatedSegments?: any[]) => {
+        try {
+            const finalSegments = updatedSegments || segments;
+            // ✅ preserve original index
+            const rowsNeedingReason =
+                finalSegments
+                    .map((s, index) => ({
+                        ...s,
+                        rowIndex: index,
+                        deficit: getDeficit(s),
+                    }))
+                    .filter((s) => s.status === "Completed" && s.deficit !== 0);
+            // ✅ open dialog first
+            if (
+                rowsNeedingReason.length > 0 &&
+                !updatedSegments
+            ) {
+                setPendingRows(rowsNeedingReason);
+                setReasonDialogOpen(true);
+                return;
+            }
+            // ✅ final payload
+            const cleaned = finalSegments.map((s) => ({
+                id: s.id,
+                title: s.title,
+                segment_start_date: s.segment_start_date,
+                segment_end_date: s.segment_end_date,
+                allocation: Number(s.allocation || 0),
+                delivered: Number(s.delivered || 0),
+                accepted: Number(s.accepted || 0),
+                rejected: Number(s.rejected || 0),
+                status: s.status,
+                unrealized_reason: s.unrealized_reason || null,
+            }));
+            await campaignSegmentService.bulkUpdate({
+                campaign_id: campaignId,
+                segments: cleaned,
+            });
+            toast.success("Segments updated successfully");
+            setIsEditing(false);
+            setReasonDialogOpen(false);
+            if (campaignId) {
 
-    try {
+                const updatedCampaign =
+                    await campaignService.getCampaignById(
+                        campaignId
+                    );
 
-        const finalSegments =
-            updatedSegments || segments;
-
-        // ✅ preserve original index
-        const rowsNeedingReason =
-            finalSegments
-                .map((s, index) => ({
-                    ...s,
-                    rowIndex: index,
-                    deficit: getDeficit(s),
-                }))
-                .filter(
-                    (s) =>
-                        s.status === "Completed" &&
-                        s.deficit !== 0
+                setSelectedCampaign(
+                    updatedCampaign
                 );
-
-        // ✅ open dialog first
-        if (
-            rowsNeedingReason.length > 0 &&
-            !updatedSegments
-        ) {
-
-            setPendingRows(rowsNeedingReason);
-
-            setReasonDialogOpen(true);
-
-            return;
+            }
+        } catch (e: any) {
+            toast.error(
+                e?.response?.data?.detail ||
+                "Failed"
+            );
         }
+    };
 
-        // ✅ final payload
-        const cleaned = finalSegments.map((s) => ({
-            id: s.id,
-
-            title: s.title,
-
-            segment_start_date:
-                s.segment_start_date,
-
-            segment_end_date:
-                s.segment_end_date,
-
-            allocation:
-                Number(s.allocation || 0),
-
-            delivered:
-                Number(s.delivered || 0),
-
-            accepted:
-                Number(s.accepted || 0),
-
-            rejected:
-                Number(s.rejected || 0),
-
-            status: s.status,
-
-            unrealized_reason:
-                s.unrealized_reason || null,
-        }));
-
-        await campaignSegmentService.bulkUpdate({
-            campaign_id: campaignId,
-            segments: cleaned,
+    const handleReasonSubmit = (reasons: Record<number, string>) => {
+        const updated = [...segments];
+        pendingRows.forEach((row, idx) => {
+            updated[row.rowIndex] = { ...updated[row.rowIndex], unrealized_reason: reasons[idx] };
         });
 
-        toast.success(
-            "Segments updated successfully"
-        );
-
-        setIsEditing(false);
-
-        setReasonDialogOpen(false);
-
-    } catch (e: any) {
-
-        toast.error(
-            e?.response?.data?.detail ||
-            "Failed"
-        );
-    }
-};
-
-const handleReasonSubmit = (
-    reasons: Record<number, string>
-) => {
-
-    const updated = [...segments];
-
-    pendingRows.forEach((row, idx) => {
-
-        updated[row.rowIndex] = {
-            ...updated[row.rowIndex],
-
-            unrealized_reason:
-                reasons[idx],
-        };
-    });
-
-    setSegments(updated);
-
-    handleSave(updated);
-};
+        setSegments(updated);
+        handleSave(updated);
+    };
 
     const handleCancel = () => {
         setSegments(originalSegments); // 🔥 reset everything
@@ -212,14 +155,12 @@ const handleReasonSubmit = (
 
     return (
         <div className="overflow-x-auto border border-border rounded-md mt-6">
-
             {isEditing && (
                 <div className="flex justify-end gap-2 p-3">
                     <Button variant="lighterror" onClick={handleCancel}>Cancel</Button>
                     <Button variant="lightprimary" onClick={() => handleSave()}>Save</Button>
                 </div>
             )}
-
             <Table>
                 <TableHeader>
                     <TableRow>

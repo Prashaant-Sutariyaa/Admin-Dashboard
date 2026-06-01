@@ -146,6 +146,7 @@ const CampaignSegmentList = () => {
                     setSegments={selectedCampaignId ? setFilteredSegments : setAllSegments}
                     isEditing={isEditing}
                     setIsEditing={setIsEditing}
+                    setSelectedCampaign={setSelectedCampaign}
                 />
 
             </CardBox>
