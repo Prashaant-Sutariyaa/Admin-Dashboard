@@ -12,6 +12,7 @@ export interface Campaign {
 
     start_date: string;
     end_date: string;
+    total_segments: number;
 
     total_allocation: number;
     total_delivered: number;
@@ -38,6 +39,7 @@ const mapCampaign = (item: any): Campaign => ({
 
     start_date: item.start_date,
     end_date: item.end_date,
+    total_segments: item.total_segments,
 
     total_allocation: item.total_allocation,
     total_delivered: item.total_delivered,
@@ -58,10 +60,13 @@ export const campaignService = {
         return res.data.data.map(mapCampaign);
     },
 
-    async getCampaigns(page = 1, limit = 20, status = "", search = "") {
-        const params: any = { page, limit };
+    async getCampaigns(page = 1, limit = 20, status = "", search = "", start_date = "", end_date = "") {
+        const params: any = { page, limit, };
         if (status) { params.status = status; }
         if (search.trim()) { params.search = search; }
+        if (start_date) { params.start_date = start_date; }
+        if (end_date) { params.end_date = end_date; }
+
         const res = await apiClient.get('/campaigns/', { params });
         return {
             data: res.data.data.map(mapCampaign),

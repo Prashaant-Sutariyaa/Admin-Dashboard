@@ -377,6 +377,7 @@ const CampaignForm = ({
                     placeholder="Total Delivered"
                     value={form.total_delivered}
                     onChange={(e) => handleChange('total_delivered', e.target.value)}
+                    disabled
                 />
             </div>
 
@@ -388,6 +389,7 @@ const CampaignForm = ({
                     placeholder="Total Accepted"
                     value={form.total_accepted}
                     onChange={(e) => handleChange('total_accepted', e.target.value)}
+                    disabled
                 />
             </div>
 
@@ -399,6 +401,7 @@ const CampaignForm = ({
                     placeholder="Total Rejected"
                     value={form.total_rejected}
                     onChange={(e) => handleChange('total_rejected', e.target.value)}
+                    disabled
                 />
             </div>
 

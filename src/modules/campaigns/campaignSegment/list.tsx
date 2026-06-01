@@ -11,6 +11,7 @@ import { campaignSegmentService } from "./services/campaignSegmentService";
 import { formatDateShort } from "src/utils/formatDateShort";
 import Can from "src/permissions/CanPermission";
 import AutoComplete from "src/components/ui/AutoComplete";
+import { useSearchParams } from "react-router";
 
 const CampaignSegmentList = () => {
     const [campaigns, setCampaigns] = useState<any[]>([]);
@@ -20,6 +21,8 @@ const CampaignSegmentList = () => {
     const [selectedCampaignId, setSelectedCampaignId] = useState<number | undefined>();
     const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
 
+    const [searchParams] = useSearchParams();
+    const selectedCampaignFromURL = searchParams.get('campaignId');
     const [isEditing, setIsEditing] = useState(false);
 
     const BCrumb = [
@@ -32,19 +35,25 @@ const CampaignSegmentList = () => {
         try {
             const [campaignData, segmentData] = await Promise.all([
                 campaignService.getAllCampaigns(),
-                campaignSegmentService.getAllCampaignSegment(), // :contentReference[oaicite:0]{index=0}
+                campaignSegmentService.getAllCampaignSegment(),
             ]);
-
             setCampaigns(campaignData || []);
             setAllSegments(segmentData || []);
-
+            if (selectedCampaignFromURL) {
+                const campaignId = Number(selectedCampaignFromURL);
+                setSelectedCampaignId(campaignId);
+                const campaign = campaignData.find((c: any) => c.id === campaignId);
+                setSelectedCampaign(campaign || null);
+                const filtered = segmentData.filter((s: any) => s.campaign_id === campaignId);
+                setFilteredSegments(filtered);
+                setOriginalSegments(filtered);
+                return;
+            }
+            // ✅ DEFAULT
             setSelectedCampaignId(undefined);
             setSelectedCampaign(null);
-
-            // 🔥 IMPORTANT
             setFilteredSegments(segmentData || []);
             setOriginalSegments(segmentData || []);
-            setFilteredSegments([]);
         } catch {
             setCampaigns([]);
             setAllSegments([]);

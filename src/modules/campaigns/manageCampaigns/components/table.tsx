@@ -36,6 +36,7 @@ const CampaignTable = ({ campaigns, onEdit, onDelete }: any) => {
               <TableHead className="text-center">Accepted</TableHead>
               <TableHead className="text-center">Rejected</TableHead>
               <TableHead className="text-center">Status</TableHead>
+              <TableHead className="text-center">Segments</TableHead>
 
               <Can module="campaign" actions={['edit', 'delete', 'download']}>
                 <TableHead className="text-center">Actions</TableHead>
@@ -124,6 +125,22 @@ const CampaignTable = ({ campaigns, onEdit, onDelete }: any) => {
 
                   <TableCell className="text-center">
                     <StatusBadge value={c.status as any} />
+                  </TableCell>
+
+                  <TableCell
+                    className="text-center"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/campaigns-segment?campaignId=${c.id}`);
+                    }}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button className="inline-flex items-center justify-center min-w-8 h-8 px-2 rounded-full bg-lightprimary text-primary text-sm font-semibold hover:bg-primary hover:text-white transition-colors">
+                          {c.total_segments}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Edit segments</TooltipContent>
+                    </Tooltip>
                   </TableCell>
 
                   {/* ✅ Actions Column */}
