@@ -58,9 +58,10 @@ export const campaignService = {
         return res.data.data.map(mapCampaign);
     },
 
-    async getCampaigns(page = 1, limit = 20, status = "") {
+    async getCampaigns(page = 1, limit = 20, status = "", search = "") {
         const params: any = { page, limit };
         if (status) { params.status = status; }
+        if (search.trim()) { params.search = search; }
         const res = await apiClient.get('/campaigns/', { params });
         return {
             data: res.data.data.map(mapCampaign),

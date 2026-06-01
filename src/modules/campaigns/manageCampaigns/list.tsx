@@ -12,16 +12,20 @@ import CampaignDialog from './components/dialogForm';
 import { campaignService, Campaign } from './services/campaignService';
 import { clientService, Client } from 'src/modules/clients/services/clientService';
 import SharedPagination from 'src/components/shared/pagination/SharedPagination';
-
+import { Search } from "lucide-react";
 import { useConfirm } from 'src/components/shared/confirmdialog/confirm-context';
 import { toast } from 'sonner';
 import Can from 'src/permissions/CanPermission';
+import { Input } from 'src/components/ui/input';
 
 const CampaignList = () => {
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [status, setStatus] = useState('');
+  const [search, setSearch] = useState('');
+
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
@@ -35,7 +39,7 @@ const CampaignList = () => {
 
   const loadAll = async () => {
     const [campaignRes, clientData] = await Promise.all([
-      campaignService.getCampaigns(page, limit, status),
+      campaignService.getCampaigns(page, limit, status, debouncedSearch),
       clientService.getAllActiveClients(),
     ]);
 
@@ -74,7 +78,24 @@ const CampaignList = () => {
 
   useEffect(() => {
     loadAll();
-  }, [page, limit, status]);
+  }, [page, limit, status, debouncedSearch]);
+  useEffect(() => {
+
+    const timer =
+      setTimeout(() => {
+
+        setDebouncedSearch(
+          search
+        );
+
+        setPage(1);
+
+      }, 500);
+
+    return () =>
+      clearTimeout(timer);
+
+  }, [search]);
 
   return (
     <>
@@ -82,7 +103,13 @@ const CampaignList = () => {
 
       <CardBox>
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search campaign name or code..." className="w-300 pl-9" />
+            </div>
+
+            {/* Status */}
             <Select
               value={status}
               onValueChange={(value) => {
@@ -90,14 +117,15 @@ const CampaignList = () => {
                 setPage(1);
               }}
             >
+
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="all"> All Status </SelectItem>
                 {CAMPAIGN_STATUS_OPTIONS.map(
                   (item) => (
-                    <SelectItem key={item.value} value={item.value}>
+                    <SelectItem key={item.value} value={item.value} >
                       {item.label}
                     </SelectItem>
                   )
