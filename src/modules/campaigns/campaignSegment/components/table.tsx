@@ -32,30 +32,29 @@ const CampSegmentTable = ({ originalSegments, campaignId, campaign, segments, se
     const getDeficit = (row: any) => Number(row.allocation || 0) - Number(row.accepted || 0);
     const getTBD = (row: any) => Number(row.delivered || 0) - (Number(row.accepted || 0) + Number(row.rejected || 0));
 
-    const handleChange = (index: number, field: string, value: any) => {
-        const updated = [...segments];
-        if (['allocation', 'delivered', 'accepted', 'rejected'].includes(field)) {
-            let numericValue = Number(value);
-            numericValue = Math.max(0, numericValue);
-            // ✅ accepted cannot exceed delivered
-            if (field === 'accepted') {
-                const delivered = Number(updated[index].delivered || 0);
-                numericValue = Math.min(numericValue, delivered);
-            }
-            updated[index][field] = numericValue;
-            // ✅ if delivered reduced below accepted
-            if (field === 'delivered') {
-                const delivered = numericValue;
-                const accepted = Number(updated[index].accepted || 0);
-                if (accepted > delivered) {
-                    updated[index].accepted = delivered;
-                }
-            }
-        } else {
-            updated[index][field] = value;
+const handleChange = (index: number, field: string, value: any) => {
+    const updated = segments.map((seg, i) => i === index ? { ...seg } : seg);
+    
+    if (['allocation', 'delivered', 'accepted', 'rejected'].includes(field)) {
+        let numericValue = Number(value);
+        numericValue = Math.max(0, numericValue);
+        if (field === 'accepted') {
+            const delivered = Number(updated[index].delivered || 0);
+            numericValue = Math.min(numericValue, delivered);
         }
-        setSegments(updated);
-    };
+        updated[index][field] = numericValue;
+        if (field === 'delivered') {
+            const delivered = numericValue;
+            const accepted = Number(updated[index].accepted || 0);
+            if (accepted > delivered) {
+                updated[index].accepted = delivered;
+            }
+        }
+    } else {
+        updated[index][field] = value;
+    }
+    setSegments(updated);
+};
 
     const handleAddRow = () => {
         setSegments([
