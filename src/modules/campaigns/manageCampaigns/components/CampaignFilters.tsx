@@ -23,6 +23,7 @@ import DateRangePicker from "src/components/ui/DateRangePicker";
 import { Input } from "src/components/ui/input";
 
 import Can from "src/permissions/CanPermission";
+import { toApiDate } from "src/utils/toApiDate";
 
 interface Props {
 
@@ -87,16 +88,12 @@ const CampaignFilters = ({
 
             start_date:
                 range?.from
-                    ? range.from
-                        .toISOString()
-                        .split("T")[0]
+                    ? toApiDate(range.from)
                     : undefined,
 
             end_date:
                 range?.to
-                    ? range.to
-                        .toISOString()
-                        .split("T")[0]
+                    ? toApiDate(range.to)
                     : undefined,
         });
 
