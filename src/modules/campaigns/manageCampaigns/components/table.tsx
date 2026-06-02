@@ -63,12 +63,8 @@ const CampaignTable = ({ campaigns, onEdit, onDelete }: any) => {
               </TableRow>
             ) : (
               campaigns.map((c: Campaign) => (
-                <TableRow
-                  key={c.id}
-                  className="even:bg-lightprimary/80 cursor-pointer hover:bg-muted/50"
-                  onClick={() => navigate(`/campaigns/details/${c.id}`)}
-                >
-                  <TableCell className="">
+                <TableRow key={c.id} className="even:bg-lightprimary/80 hover:bg-muted/50" >
+                  <TableCell className="cursor-pointer " onClick={() => navigate(`/campaigns/details/${c.id}`)}>
                     {/* NAME */}
                     <div>
                       {c.campaign_name?.length > 20 ? (

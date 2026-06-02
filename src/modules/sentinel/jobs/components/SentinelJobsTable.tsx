@@ -1,243 +1,182 @@
-import { useState, useMemo } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from 'src/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from 'src/components/ui/select';
-import { Input } from 'src/components/ui/input';
-import { Button } from 'src/components/ui/button';
-import { Icon } from '@iconify/react';
-import CardBox from 'src/components/shared/CardBox';
-import { sentinelJobsData } from '../types-data/sentinelJobs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "src/components/ui/table";
+import { Input } from "src/components/ui/input";
+import { Download, Search, FileWarning } from "lucide-react";
+import { toast } from "sonner";
+import StatusBadge from "src/components/shared/status-badges/StatusBadge";
+import { SentinelJobService } from "../services/SentinelJobService";
 
-const pageSizeOptions = [10, 20, 50, 100];
+interface Props {
+  jobs: any[];
+  loading: boolean;
+  search: string;
+  setSearch: (value: string) => void;
+}
 
-const tableHeadings = [
-  'Job ID',
-  'Department',
-  'Campaign ID',
-  'Segment ID',
-  'Batch IDs',
-  'Uploaded File',
-  'Processed File',
-  'Invalid File',
-  'Status',
-  'Priority',
-  'Action',
-];
+const SentinelJobsTable = ({ jobs, loading, search, setSearch }: Props) => {
 
-const SentinelJobsTable = () => {
-  const [search, setSearch]     = useState('');
-  const [pageSize, setPageSize] = useState(10);
-  const [page, setPage]         = useState(1);
+  const downloadUploadedFile = async (id: number, fileName: string) => {
+    try {
+      const blob = await SentinelJobService.downloadUploadedFile(id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName || "uploaded-file.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to download uploaded file");
+    }
+  };
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return sentinelJobsData;
-    return sentinelJobsData.filter((item) =>
-      item.campaignId.toLowerCase().includes(search.toLowerCase()),
-    );
-  }, [search]);
+  const downloadFailedFile = async (id: number, fileName?: string) => {
+    try {
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginated  = filtered.slice((page - 1) * pageSize, page * pageSize);
-
-  const handleSearch   = (val: string) => { setSearch(val);          setPage(1); };
-  const handlePageSize = (val: string) => { setPageSize(Number(val)); setPage(1); };
+      const blob = await SentinelJobService.downloadFailedFile(id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName || "failed-file.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to download failed file");
+    }
+  };
 
   return (
-    <CardBox>
 
-      {/* ── Controls ── */}
-      <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">Show entries</span>
-          <Select value={String(pageSize)} onValueChange={handlePageSize}>
-            <SelectTrigger className="w-20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {pageSizeOptions.map((size) => (
-                <SelectItem key={size} value={String(size)}>{size}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+    <div className="space-y-4">
 
+      {/* FILTER */}
+       <div className="p-4 flex items-center justify-between gap-4">
         <div className="relative">
-          <Icon
-            icon="solar:magnifer-linear"
-            width={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
+          <Search size={16} className=" absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground " />
+
           <Input
-            type="text"
-            placeholder="Search by campaign ID..."
             value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-9 w-64"
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search campaign / segment / batch... "
+            className=" w-[320px] pl-9 "
           />
         </div>
       </div>
 
-      {/* ── Table ── */}
-      <div className="overflow-x-auto border border-border rounded-md">
+      {/* TABLE */}
+      <div className=" rounded-xl border border-border overflow-hidden ">
         <Table>
           <TableHeader>
             <TableRow>
-              {tableHeadings.map((heading) => (
-                <TableHead
-                  key={heading}
-                  className="text-xs font-semibold whitespace-nowrap border-r border-border last:border-r-0"
-                >
-                  {heading}
-                </TableHead>
-              ))}
+              <TableHead>Job ID</TableHead>
+              <TableHead>Department</TableHead>
+              <TableHead>Campaign</TableHead>
+              <TableHead>Segment</TableHead>
+              <TableHead>Batch Codes</TableHead>
+              <TableHead>Uploaded File</TableHead>
+              <TableHead>Failed File</TableHead>
+              <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
-
           <TableBody>
-            {paginated.length === 0 ? (
+            {loading ? (
               <TableRow>
-                <TableCell
-                  colSpan={tableHeadings.length}
-                  className="text-center py-8 text-muted-foreground"
-                >
-                  No records found.
+                <TableCell colSpan={10} className=" text-center py-10 text-muted-foreground " >
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : jobs.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10} className=" text-center py-10 text-muted-foreground " >
+                  No jobs found
                 </TableCell>
               </TableRow>
             ) : (
-              paginated.map((item) => (
-                <TableRow
-                  key={item.id}
-                  className="hover:bg-lightprimary transition-colors even:bg-lightprimary/80"
-                >
+              jobs.map((job) => (
+                <TableRow key={job.id} className=" hover:bg-lightprimary transition-colors even:bg-lightprimary/40 " >
+
                   {/* Job ID */}
-                  <TableCell className="border-r border-border text-sm font-semibold text-primary whitespace-nowrap">
-                    {item.jobId}
+                  <TableCell className="border-r border-border text-sm font-semibold text-primary whitespace-nowrap ">
+                    {job.id}
                   </TableCell>
 
                   {/* Department */}
-                  <TableCell className="border-r border-border">
-                     {item.department}
+                  <TableCell className="border-r border-border whitespace-nowrap ">
+                    {job.department}
                   </TableCell>
 
-                  {/* Campaign ID */}
-                  <TableCell className="border-r border-border text-xs text-muted-foreground whitespace-nowrap">
-                    {item.campaignId}
+                  {/* Campaign */}
+                  <TableCell className="border-r border-border text-xs whitespace-nowrap max-w-[180px] truncate ">
+                    {job.campaign_codes || "-"}
                   </TableCell>
 
-                  {/* Segment ID */}
-                  <TableCell className="border-r border-border text-xs text-muted-foreground whitespace-nowrap">
-                    {item.segmentId}
+                  {/* Segment */}
+                  <TableCell className="border-r border-border text-xs whitespace-nowrap ">
+                    {job.segment_codes || "-"}
                   </TableCell>
 
-                  {/* Batch IDs — word break, fixed width, grows in height */}
-                  <TableCell className="border-r border-border min-w-40 max-w-200">
-                    <div className="flex flex-wrap gap-1">
-                      {item.batchIds.map((batchId) => (
-                        <span
-                          key={batchId}
-                          className="text-xs font-medium text-foreground bg-muted rounded px-1.5 py-0.5 whitespace-nowrap"
-                        >
-                          {batchId}
-                        </span>
-                      ))}
-                    </div>
+                  {/* Batch Codes */}
+                  <TableCell className="border-r border-border min-w-[220px] max-w-[320px] ">
+
+                    {job.batch_codes ? (
+
+                      <div className="flex flex-wrap gap-1 ">
+                        {String(job.batch_codes).split(",").map((batch: string) => (
+                          <span
+                            key={batch}
+                            className="text-xs font-medium text-foreground bg-muted rounded px-1.5 py-0.5 whitespace-nowrap " >
+                            {batch.trim()}
+                          </span>
+                        ))}
+
+                      </div>
+                    ) : "-"}
                   </TableCell>
 
                   {/* Uploaded File */}
-                  <TableCell className="border-r border-border text-xs text-muted-foreground">
-                    {item.uploadedFile ? (
-                      <span className="flex items-center gap-1.5 whitespace-nowrap">
-                        <Icon icon="solar:file-text-linear" width={14} className="text-primary shrink-0" />
-                        {item.uploadedFile}
-                      </span>
-                    ) : ''}
+                  <TableCell className="border-r border-border text-xs ">
+                    {job.file_name ? (
+                      <button onClick={() => downloadUploadedFile(job.id, job.file_name)} className="flex items-center gap-1.5 text-info hover:underline whitespace-nowrap" >
+                        <Download size={14} className="shrink-0" />
+                        <span className="max-w-[180px] truncate ">
+                          {job.file_name}
+                        </span>
+                      </button>
+                    ) : "-"}
+
                   </TableCell>
 
-                  {/* Processed File */}
-                  <TableCell className="border-r border-border text-xs text-muted-foreground">
-                    {item.processedFile ? (
-                      <span className="flex items-center gap-1.5 whitespace-nowrap">
-                        <Icon icon="solar:file-check-linear" width={14} className="text-success shrink-0" />
-                        {item.processedFile}
-                      </span>
-                    ) : ''}
-                  </TableCell>
+                  {/* Failed File */}
+                  <TableCell className="border-r border-border text-xs ">
+                    {job.invalid_file_name ? (
+                      <button
+                        onClick={() => downloadFailedFile(job.id, job.invalid_file_name)}
+                        className="flex items-center gap-1.5 text-error hover:underline whitespace-nowrap " >
 
-                  {/* Invalid File */}
-                  <TableCell className="border-r border-border text-xs text-muted-foreground">
-                    {item.invalidFile ? (
-                      <span className="flex items-center gap-1.5 whitespace-nowrap">
-                        <Icon icon="solar:file-corrupted-linear" width={14} className="text-error shrink-0" />
-                        {item.invalidFile}
-                      </span>
-                    ) : ''}
+                        <FileWarning size={14} className="shrink-0" />
+                        <span className="max-w-[180px] truncate ">
+                          {job.invalid_file_name}
+                        </span>
+
+                      </button>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
 
                   {/* Status */}
                   <TableCell className="border-r border-border">
-                      {item.status}
+                    <StatusBadge value={job.status} />
                   </TableCell>
-
-                  {/* Priority */}
-                  <TableCell className="border-r border-border">
-                    {item.priority}
-                  </TableCell>
-
-                  {/* Action — placeholder */}
-                  <TableCell className="text-sm text-muted-foreground">
-                    Action
-                  </TableCell>
-
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
-
-      {/* ── Pagination ── */}
-      <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
-        <p className="text-sm text-muted-foreground">
-          Showing{' '}
-          {filtered.length === 0 ? 0 : (page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)}{' '}
-          of {filtered.length} entries
-        </p>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-muted-foreground px-1">
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
-
-    </CardBox>
+    </div>
   );
 };
 

@@ -105,6 +105,10 @@ const MANDATORY_HEADERS: Record<string, string[]> = {
         'work email',
         'country',
         'contact linkedin profile',
+        // 'company linkedin profile',
+        'job title',
+        'domain',
+        'tal company name',
         'email validation status',
     ],
     Email: [
@@ -116,13 +120,29 @@ const MANDATORY_HEADERS: Record<string, string[]> = {
     Quality: [
         'batch id',
         'quality agent',
+        'first name',
+        'last name',
         'work email',
+        'country',
+        'contact linkedin profile',
+        'company linkedin profile',
+        'job title',
+        'domain',
+        'tal company name',
         'quality status',
     ],
     DBR: [
         'batch id',
         'dbr agent',
+        'first name',
+        'last name',
         'work email',
+        'country',
+        'contact linkedin profile',
+        'company linkedin profile',
+        'job title',
+        'domain',
+        'tal company name',
         'dbr status',
     ],
     VV: [
@@ -141,7 +161,7 @@ const MANDATORY_HEADERS: Record<string, string[]> = {
 
 const ENUM_RULES: Record<string, Record<string, string[]>> = {
     DataOps: {
-        'email validation status': ['valid', 'invalid', 'catch-all', 'unknown', 'catch_all', 'ok', 'apollo verify'],
+        'email validation status': ['valid', 'invalid', 'catch-all', 'unknown', 'catch_all', 'ok', 'apollo verify', 'verified'],
     },
     Email: {
         'email status': [
