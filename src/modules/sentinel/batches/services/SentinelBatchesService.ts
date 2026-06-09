@@ -85,6 +85,16 @@ export const SentinelBatchesService = {
   async getDispostionsData() {
     const res = await apiClient.get('/dispositions/');
     return res.data;
+  },
+
+  async getCountriesData() {
+    const res = await apiClient.get('/countries/');
+    return res.data;
+  },
+
+  async getIndustryData() {
+    const res = await apiClient.get('/industries/');
+    return res.data;
   }
 
 };

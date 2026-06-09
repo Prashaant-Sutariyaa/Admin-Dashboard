@@ -68,9 +68,20 @@ interface RowValidationResult {
     invalidRows: number;
     issues: RowIssue[];
     canUpload: boolean;
-    invalidRowData: { headers: string[]; rows: string[][] };
-}
 
+    invalidRowData: {
+        headers: string[];
+        rows: string[][];
+        reasons: string[];
+    };
+
+    validRowData: {
+        headers: string[];
+        rows: string[][];
+    };
+
+    originalHeaders: string[];
+}
 
 const normalizeKey = (...values: string[]) =>
     values.map((v) => v.trim().toLowerCase()).join('__');
@@ -105,7 +116,7 @@ const MANDATORY_HEADERS: Record<string, string[]> = {
         'work email',
         'country',
         'contact linkedin profile',
-        // 'company linkedin profile',
+        'company linkedin profile',
         'job title',
         'domain',
         'tal company name',
@@ -207,7 +218,25 @@ const CONDITIONAL_REQUIRED: Record<
 
 const LINKEDIN_PERSONAL_FIELD: Record<string, string> = {
     DataOps: 'contact linkedin profile',
+    Quality: 'contact linkedin profile',
+    DBR: 'contact linkedin profile',
 };
+
+const LINKEDIN_COMPANY_FIELD: Record<string, string> = {
+    DataOps: 'company linkedin profile',
+    Quality: 'company linkedin profile',
+    DBR: 'company linkedin profile',
+};
+const COUNTRY_VALIDATION_DEPARTMENTS = [
+    'DataOps',
+    'Quality',
+    'DBR',
+];
+const INDUSTRY_VALIDATION_DEPARTMENTS = [
+    'DataOps',
+    'Quality',
+    'DBR',
+];
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -219,13 +248,17 @@ const getSampleFileName = (url: string): string => {
 const isEmpty = (value: string): boolean =>
     value === '' || value.trim() === '' || value.trim() === '-';
 
+// FIX: only allow personal LinkedIn URLs (linkedin.com/in/...), not company URLs
 const isValidPersonalLinkedIn = (url: string): boolean =>
-    /^(https?:\/\/)?(www\.)?linkedin\.com\/(in|company)\/.+/i.test(url.trim());
+    /^(https?:\/\/)?(www\.)?linkedin\.com\/in\/.+/i.test(url.trim());
+
+const isValidCompanyLinkedIn = (url: string): boolean =>
+    /^(https?:\/\/)?(www\.)?linkedin\.com\/(company|school)\/.+/i.test(url.trim());
 
 const cleanText = (text: string): string =>
     text.replace(/^\uFEFF/, '').replace(/\r/g, '');
 
-// ── Proper CSV row parser — handles quoted fields with commas ──
+// ── CSV parser — handles quoted fields with embedded commas/newlines ──
 const parseCSVLine = (line: string): string[] => {
     const result: string[] = [];
     let current = '';
@@ -235,7 +268,6 @@ const parseCSVLine = (line: string): string[] => {
         const char = line[i];
 
         if (char === '"') {
-            // Handle escaped quotes ("")
             if (insideQuotes && line[i + 1] === '"') {
                 current += '"';
                 i++;
@@ -261,10 +293,9 @@ const fetchSampleHeaders = async (url: string): Promise<string[]> => {
     return parseCSVLine(firstLine).map((h) => h.toLowerCase());
 };
 
-// ── Updated parseUploadedFile using parseCSVLine ──
 const parseUploadedFile = (
     file: File,
-): Promise<{ headers: string[]; rows: string[][]; rowCount: number }> => {
+): Promise<{ headers: string[]; originalHeaders: string[]; rows: string[][]; rowCount: number }> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -272,20 +303,20 @@ const parseUploadedFile = (
             const lines = text.split('\n').filter((l) => l.trim() !== '');
             if (lines.length === 0) return reject(new Error('Empty file'));
 
-            const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase());
+            const originalHeaders = parseCSVLine(lines[0]);
+
+            const headers = originalHeaders.map((h) => h.toLowerCase());
+
             const rows = lines.slice(1).map((line) => parseCSVLine(line));
 
-            resolve({ headers, rows, rowCount: rows.length });
+            resolve({ headers, originalHeaders, rows, rowCount: rows.length });
         };
         reader.onerror = () => reject(new Error('Failed to read file'));
         reader.readAsText(file);
     });
 };
 
-const validateHeaders = (
-    sampleHeaders: string[],
-    uploadedHeaders: string[],
-): HeaderValidation => {
+const validateHeaders = (sampleHeaders: string[], uploadedHeaders: string[]): HeaderValidation => {
     const sampleSet = new Set(sampleHeaders);
     const uploadedSet = new Set(uploadedHeaders);
     return {
@@ -295,28 +326,37 @@ const validateHeaders = (
     };
 };
 
-// ── Row validation — unchanged logic ─────────────────────────
+// ── Row validation ────────────────────────────────────────────
+// Changes:
+//   1. Removed all `break` statements — every check runs for every row
+//   2. Per-row reasons array collected for the "Invalid Reason" CSV column
+//   3. LinkedIn fix: empty mandatory LinkedIn field now flagged correctly
+//   4. validRowData returned for building the upload payload
 
-const validateRows = (
-    deptKey: string,
-    headers: string[],
-    rows: string[][],
-    vvDispositions: string[] = [],
-): RowValidationResult => {
+const validateRows = (deptKey: string, headers: string[], originalHeaders: string[], rows: string[][], countries: any[] = [], industries: any[] = [],
+
+    vvDispositions: string[] = []): RowValidationResult => {
 
     const mandatoryHeaders = MANDATORY_HEADERS[deptKey] ?? [];
 
     const enumRules = {
         ...(ENUM_RULES[deptKey] ?? {}),
-        ...(deptKey === 'VV'
-            ? {
-                'vv disposition': vvDispositions,
-            }
-            : {}),
+        ...(deptKey === 'VV' ? { 'vv disposition': vvDispositions } : {}),
     };
 
     const conditionalRules = CONDITIONAL_REQUIRED[deptKey] ?? [];
     const linkedInField = LINKEDIN_PERSONAL_FIELD[deptKey] ?? null;
+    const companyLinkedInField = LINKEDIN_COMPANY_FIELD[deptKey] ?? null;
+    const validCountries = new Set(
+        countries.map((c) =>
+            String(c.name).trim().toLowerCase()
+        )
+    );
+    // const validIndustries = new Set(
+    //     industries.map((i) =>
+    //         String(i.industry).trim().toLowerCase()
+    //     )
+    // );
 
     const issueCounts: Record<string, number> = {
         'Missing required field': 0,
@@ -328,8 +368,18 @@ const validateRows = (
     };
 
     if (linkedInField) {
-        issueCounts['Invalid LinkedIn URL'] = 0;
-        issueCounts['Duplicate LinkedIn URL'] = 0;
+        issueCounts['Invalid Personal LinkedIn URL'] = 0;
+        issueCounts['Duplicate Personal LinkedIn URL'] = 0;
+    }
+
+    if (companyLinkedInField) {
+        issueCounts['Invalid Company LinkedIn URL'] = 0;
+    }
+    if (COUNTRY_VALIDATION_DEPARTMENTS.includes(deptKey)) {
+        issueCounts['Invalid Country'] = 0;
+    }
+    if (INDUSTRY_VALIDATION_DEPARTMENTS.includes(deptKey)) {
+        issueCounts['Invalid Industry'] = 0;
     }
 
     conditionalRules.forEach((r) => {
@@ -339,7 +389,6 @@ const validateRows = (
     const emailColIdx = headers.indexOf('work email');
     const batchColIdx = headers.indexOf('batch id');
     const linkedInColIdx = linkedInField ? headers.indexOf(linkedInField) : -1;
-
     const firstNameColIdx = headers.indexOf('first name');
     const lastNameColIdx = headers.indexOf('last name');
     const domainColIdx = headers.indexOf('domain');
@@ -350,333 +399,234 @@ const validateRows = (
     const duplicateFnLnDomainKeys = new Set<string>();
     const duplicateFnLnCompanyKeys = new Set<string>();
 
-    // ─────────────────────────────────────────────────────────
-    // WORK EMAIL DUPLICATES
-    // ─────────────────────────────────────────────────────────
+    // ── WORK EMAIL DUPLICATES ─────────────────────────────────
 
     if (emailColIdx !== -1) {
         const freq: Record<string, number> = {};
-
         rows.forEach((row) => {
             const email = (row[emailColIdx] ?? '').trim().toLowerCase();
-
-            const batchId =
-                batchColIdx !== -1
-                    ? (row[batchColIdx] ?? '').trim().toLowerCase()
-                    : '';
-
+            const batchId = batchColIdx !== -1 ? (row[batchColIdx] ?? '').trim().toLowerCase() : '';
             if (!email) return;
-
-            const key =
-                deptKey === 'DataOps'
-                    ? email
-                    : `${batchId}__${email}`;
-
+            const key = deptKey === 'DataOps' ? email : `${batchId}__${email}`;
             freq[key] = (freq[key] ?? 0) + 1;
         });
-
         Object.entries(freq).forEach(([key, count]) => {
-            if (count > 1) {
-                duplicateEmailKeys.add(key);
-            }
+            if (count > 1) duplicateEmailKeys.add(key);
         });
     }
 
-    // ─────────────────────────────────────────────────────────
-    // LINKEDIN DUPLICATES
-    // ─────────────────────────────────────────────────────────
+    // ── LINKEDIN DUPLICATES ───────────────────────────────────
 
     if (linkedInField && linkedInColIdx !== -1) {
         const freq: Record<string, number> = {};
-
         rows.forEach((row) => {
-            const val = (row[linkedInColIdx] ?? '')
-                .trim()
-                .toLowerCase();
-
-            if (!val) return;
-
+            const val = (row[linkedInColIdx] ?? '').trim().toLowerCase();
+            if (!val || isEmpty(val)) return;
             freq[val] = (freq[val] ?? 0) + 1;
         });
-
         Object.entries(freq).forEach(([val, count]) => {
-            if (count > 1) {
-                duplicateLinkedInKeys.add(val);
-            }
+            if (count > 1) duplicateLinkedInKeys.add(val);
         });
     }
 
-    // ─────────────────────────────────────────────────────────
-    // FN + LN + DOMAIN DUPLICATES
-    // ─────────────────────────────────────────────────────────
+    // ── FN + LN + DOMAIN DUPLICATES ───────────────────────────
 
-    if (
-        firstNameColIdx !== -1 &&
-        lastNameColIdx !== -1 &&
-        domainColIdx !== -1
-    ) {
+    if (firstNameColIdx !== -1 && lastNameColIdx !== -1 && domainColIdx !== -1) {
         const freq: Record<string, number> = {};
-
         rows.forEach((row) => {
-            const firstName = (row[firstNameColIdx] ?? '')
-                .trim()
-                .toLowerCase();
-
-            const lastName = (row[lastNameColIdx] ?? '')
-                .trim()
-                .toLowerCase();
-
-            const domain = (row[domainColIdx] ?? '')
-                .trim()
-                .toLowerCase();
-
+            const firstName = (row[firstNameColIdx] ?? '').trim().toLowerCase();
+            const lastName = (row[lastNameColIdx] ?? '').trim().toLowerCase();
+            const domain = (row[domainColIdx] ?? '').trim().toLowerCase();
             if (!firstName || !lastName || !domain) return;
-
-            const key = normalizeKey(
-                firstName,
-                lastName,
-                domain,
-            );
-
+            const key = normalizeKey(firstName, lastName, domain);
             freq[key] = (freq[key] ?? 0) + 1;
         });
-
         Object.entries(freq).forEach(([key, count]) => {
-            if (count > 1) {
-                duplicateFnLnDomainKeys.add(key);
-            }
+            if (count > 1) duplicateFnLnDomainKeys.add(key);
         });
     }
 
-    // ─────────────────────────────────────────────────────────
-    // FN + LN + COMPANY DUPLICATES
-    // ─────────────────────────────────────────────────────────
+    // ── FN + LN + COMPANY DUPLICATES ─────────────────────────
 
-    if (
-        firstNameColIdx !== -1 &&
-        lastNameColIdx !== -1 &&
-        companyColIdx !== -1
-    ) {
+    if (firstNameColIdx !== -1 && lastNameColIdx !== -1 && companyColIdx !== -1) {
         const freq: Record<string, number> = {};
-
         rows.forEach((row) => {
-            const firstName = (row[firstNameColIdx] ?? '')
-                .trim()
-                .toLowerCase();
-
-            const lastName = (row[lastNameColIdx] ?? '')
-                .trim()
-                .toLowerCase();
-
-            const company = (row[companyColIdx] ?? '')
-                .trim()
-                .toLowerCase();
-
+            const firstName = (row[firstNameColIdx] ?? '').trim().toLowerCase();
+            const lastName = (row[lastNameColIdx] ?? '').trim().toLowerCase();
+            const company = (row[companyColIdx] ?? '').trim().toLowerCase();
             if (!firstName || !lastName || !company) return;
-
-            const key = normalizeKey(
-                firstName,
-                lastName,
-                company,
-            );
-
+            const key = normalizeKey(firstName, lastName, company);
             freq[key] = (freq[key] ?? 0) + 1;
         });
-
         Object.entries(freq).forEach(([key, count]) => {
-            if (count > 1) {
-                duplicateFnLnCompanyKeys.add(key);
-            }
+            if (count > 1) duplicateFnLnCompanyKeys.add(key);
         });
     }
 
-    // ─────────────────────────────────────────────────────────
-    // ROW VALIDATION
-    // ─────────────────────────────────────────────────────────
+    // ── ROW VALIDATION ────────────────────────────────────────
 
     let validRows = 0;
-
     const invalidRowIndices = new Set<number>();
+    // per-row reasons: index matches rows array index
+    const rowReasons: string[] = new Array(rows.length).fill('');
 
     rows.forEach((row, rowIndex) => {
-
         const rowMap: Record<string, string> = {};
+        headers.forEach((h, i) => { rowMap[h] = row[i] ?? ''; });
 
-        headers.forEach((h, i) => {
-            rowMap[h] = row[i] ?? '';
-        });
+        // collect all reasons for this row
+        const reasons: string[] = [];
 
-        let rowHasIssue = false;
-
-        // REQUIRED FIELDS
-
+        // ── REQUIRED FIELDS
+        // FIX: no break — check every mandatory field and collect all missing ones
+        const missingFields: string[] = [];
         for (const field of mandatoryHeaders) {
             if (isEmpty(rowMap[field] ?? '')) {
-                issueCounts['Missing required field']++;
-                rowHasIssue = true;
-                break;
+                missingFields.push(field);
             }
         }
-
-        // EMAIL FORMAT
-
-        const workEmail = (rowMap['work email'] ?? '').trim();
-
-        if (
-            workEmail &&
-            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(workEmail)
-        ) {
-            issueCounts['Invalid email format']++;
-            rowHasIssue = true;
+        if (missingFields.length > 0) {
+            issueCounts['Missing required field'] += missingFields.length;
+            reasons.push(`Missing required field: ${missingFields.join(', ')}`);
         }
 
-        // EMAIL DUPLICATE
+        // ── EMAIL FORMAT
+        const workEmail = (rowMap['work email'] ?? '').trim();
+        if (workEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(workEmail)) {
+            issueCounts['Invalid email format']++;
+            reasons.push('Invalid email format');
+        }
 
+        // ── EMAIL DUPLICATE
         if (workEmail) {
-
-            const batchId = (rowMap['batch id'] ?? '')
-                .trim()
-                .toLowerCase();
-
-            const key =
-                deptKey === 'DataOps'
-                    ? workEmail.toLowerCase()
-                    : `${batchId}__${workEmail.toLowerCase()}`;
-
+            const batchId = (rowMap['batch id'] ?? '').trim().toLowerCase();
+            const key = deptKey === 'DataOps'
+                ? workEmail.toLowerCase()
+                : `${batchId}__${workEmail.toLowerCase()}`;
             if (duplicateEmailKeys.has(key)) {
                 issueCounts['Duplicate work email']++;
-                rowHasIssue = true;
+                reasons.push('Duplicate work email');
             }
         }
 
-        // LINKEDIN VALIDATION
-
+        // ── LINKEDIN VALIDATION
+        // FIX: check both empty AND invalid/duplicate — not mutually exclusive with required check
         if (linkedInField) {
-
             const linkedin = (rowMap[linkedInField] ?? '').trim();
-
-            if (linkedin) {
-
+            if (!isEmpty(linkedin)) {
+                // non-empty: validate format then duplicate
                 if (!isValidPersonalLinkedIn(linkedin)) {
-                    issueCounts['Invalid LinkedIn URL']++;
-                    rowHasIssue = true;
+                    issueCounts['Invalid Personal LinkedIn URL']++;
+                    reasons.push('Invalid Personal LinkedIn URL');
+                } else if (duplicateLinkedInKeys.has(linkedin.toLowerCase())) {
+                    issueCounts['Duplicate Personal LinkedIn URL']++;
+                    reasons.push('Duplicate Personal LinkedIn URL');
+                }
+            }
+            // if empty: already caught by required fields check above — no double-count
+        }
 
-                } else if (
-                    duplicateLinkedInKeys.has(
-                        linkedin.toLowerCase(),
-                    )
-                ) {
-                    issueCounts['Duplicate LinkedIn URL']++;
-                    rowHasIssue = true;
+        if (companyLinkedInField) {
+            const companyLinkedIn = (rowMap[companyLinkedInField] ?? '').trim();
+            if (!isEmpty(companyLinkedIn)) {
+                if (!isValidCompanyLinkedIn(companyLinkedIn)) {
+                    issueCounts['Invalid Company LinkedIn URL']++;
+                    reasons.push('Invalid Company LinkedIn URL');
                 }
             }
         }
 
-        // FN + LN + DOMAIN DUPLICATE
+        if (COUNTRY_VALIDATION_DEPARTMENTS.includes(deptKey)) {
+            const country = (rowMap['country'] ?? '').trim().toLowerCase();
+            if (!isEmpty(country) && !validCountries.has(country)) {
+                issueCounts['Invalid Country']++;
+                reasons.push('Invalid Country');
+            }
+        }
 
-        const firstName = (rowMap['first name'] ?? '')
-            .trim()
-            .toLowerCase();
+        // if (INDUSTRY_VALIDATION_DEPARTMENTS.includes(deptKey)) {
+        //     const industry = (rowMap['industry'] ?? '').trim().toLowerCase();
+        //     if (!isEmpty(industry) && !validIndustries.has(industry)) {
+        //         issueCounts['Invalid Industry']++;
+        //         reasons.push('Invalid Industry');
+        //     }
+        // }
 
-        const lastName = (rowMap['last name'] ?? '')
-            .trim()
-            .toLowerCase();
-
-        const domain = (rowMap['domain'] ?? '')
-            .trim()
-            .toLowerCase();
-
-        const company = (rowMap['tal company name'] ?? '')
-            .trim()
-            .toLowerCase();
+        // ── FN + LN + DOMAIN DUPLICATE
+        const firstName = (rowMap['first name'] ?? '').trim().toLowerCase();
+        const lastName = (rowMap['last name'] ?? '').trim().toLowerCase();
+        const domain = (rowMap['domain'] ?? '').trim().toLowerCase();
+        const company = (rowMap['tal company name'] ?? '').trim().toLowerCase();
 
         if (firstName && lastName && domain) {
-
-            const key = normalizeKey(
-                firstName,
-                lastName,
-                domain,
-            );
-
+            const key = normalizeKey(firstName, lastName, domain);
             if (duplicateFnLnDomainKeys.has(key)) {
                 issueCounts['Duplicate FN + LN + Domain']++;
-                rowHasIssue = true;
+                reasons.push('Duplicate FN + LN + Domain');
             }
         }
 
-        // FN + LN + COMPANY DUPLICATE
-
+        // ── FN + LN + COMPANY DUPLICATE
         if (firstName && lastName && company) {
-
-            const key = normalizeKey(
-                firstName,
-                lastName,
-                company,
-            );
-
+            const key = normalizeKey(firstName, lastName, company);
             if (duplicateFnLnCompanyKeys.has(key)) {
                 issueCounts['Duplicate FN + LN + Company']++;
-                rowHasIssue = true;
+                reasons.push('Duplicate FN + LN + Company');
             }
         }
 
-        // ENUM VALIDATION
-
+        // ── ENUM VALIDATION
+        // FIX: no break — check every enum column and collect all violations
         for (const [col, allowed] of Object.entries(enumRules)) {
-
             const cellVal = (rowMap[col] ?? '').trim();
-
-            if (
-                cellVal &&
-                !allowed.includes(cellVal.toLowerCase())
-            ) {
+            if (cellVal && !allowed.includes(cellVal.toLowerCase())) {
                 issueCounts['Invalid enum value']++;
-                rowHasIssue = true;
-                break;
+                reasons.push(`Invalid value for "${col}": "${cellVal}"`);
             }
         }
 
-        // CONDITIONAL REQUIRED
-
+        // ── CONDITIONAL REQUIRED
         for (const rule of conditionalRules) {
-
-            const triggerVal = (rowMap[rule.triggerCol] ?? '')
-                .trim()
-                .toLowerCase();
-
+            const triggerVal = (rowMap[rule.triggerCol] ?? '').trim().toLowerCase();
             if (rule.triggerValues.includes(triggerVal)) {
-
                 if (isEmpty(rowMap[rule.requiredCol] ?? '')) {
                     issueCounts[rule.label]++;
-                    rowHasIssue = true;
+                    reasons.push(rule.label);
                 }
             }
         }
 
-        // FINAL RESULT
-
-        if (rowHasIssue) {
+        // ── FINAL RESULT
+        if (reasons.length > 0) {
             invalidRowIndices.add(rowIndex);
+            rowReasons[rowIndex] = reasons.join(', ');
         } else {
             validRows++;
         }
     });
 
     const totalRows = rows.length;
-
     const invalidRows = totalRows - validRows;
 
     const issues = Object.entries(issueCounts)
         .filter(([, count]) => count > 0)
-        .map(([label, count]) => ({
-            label,
-            count,
-        }));
+        .map(([label, count]) => ({ label, count }));
+
+    // invalid rows — with per-row reasons collected
+    const invalidRowsFiltered = rows
+        .map((row, i) => ({ row, reason: rowReasons[i], isInvalid: invalidRowIndices.has(i) }))
+        .filter((r) => r.isInvalid);
 
     const invalidRowData = {
-        headers,
-        rows: rows.filter((_, i) =>
-            invalidRowIndices.has(i),
+        headers: originalHeaders,
+        rows: invalidRowsFiltered.map((r) => r.row),
+        reasons: invalidRowsFiltered.map((r) => r.reason),
+    };
+
+    const validRowData = {
+        headers: originalHeaders,
+        rows: rows.filter(
+            (_, i) => !invalidRowIndices.has(i)
         ),
     };
 
@@ -687,22 +637,38 @@ const validateRows = (
         issues,
         canUpload: validRows > 0,
         invalidRowData,
+        validRowData,
+        originalHeaders,
     };
 };
 
-// ── Download invalid rows ─────────────────────────────────────
+// ── CSV cell escaper (RFC 4180) ───────────────────────────────
 
-const downloadInvalidRowsCSV = (
-    headers: string[],
-    rows: string[][],
-    originalFileName: string,
-) => {
-    const csvContent = [
-        headers.join(','),
-        ...rows.map((row) =>
-            row.map((cell) => (cell.includes(',') ? `"${cell}"` : cell)).join(','),
-        ),
+const escapeCSVCell = (cell: string): string => {
+    const needsQuoting =
+        cell.includes(',') ||
+        cell.includes('"') ||
+        cell.includes('\n') ||
+        cell.includes('\r');
+    if (!needsQuoting) return cell;
+    return `"${cell.replace(/"/g, '""')}"`;
+};
+
+// ── Build a CSV string from headers + rows ────────────────────
+
+const buildCSVString = (headers: string[], rows: string[][]): string =>
+    [
+        headers.map(escapeCSVCell).join(','),
+        ...rows.map((row) => row.map((cell) => escapeCSVCell(cell ?? '')).join(',')),
     ].join('\n');
+
+// ── Download invalid rows CSV (adds "Invalid Reason" column) ──
+
+const downloadInvalidRowsCSV = (headers: string[], rows: string[][], reasons: string[], originalFileName: string) => {
+    const headersWithReason = [...headers, 'Invalid Reason'];
+    const rowsWithReason = rows.map((row, i) => [...row, reasons[i] ?? '']);
+
+    const csvContent = buildCSVString(headersWithReason, rowsWithReason);
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -716,6 +682,14 @@ const downloadInvalidRowsCSV = (
     URL.revokeObjectURL(url);
 };
 
+// ── Build a File object from valid rows only (for upload) ─────
+
+const buildValidRowsFile = (headers: string[], rows: string[][], originalFileName: string): File => {
+    const csvContent = buildCSVString(headers, rows);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    return new File([blob], originalFileName, { type: 'text/csv' });
+};
+
 // ── Component ─────────────────────────────────────────────────
 
 const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Props) => {
@@ -725,6 +699,8 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
     const [segments, setSegments] = useState<Segment[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [vvDispositions, setVvDispositions] = useState<string[]>([]);
+    const [countries, setCountries] = useState<any[]>([]);
+    const [industries, setIndustries] = useState<any[]>([]);
     const [campaignId, setCampaignId] = useState('');
     const [segmentId, setSegmentId] = useState('');
     const [departmentId, setDepartmentId] = useState('');
@@ -734,7 +710,6 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
     const [rowValidation, setRowValidation] = useState<RowValidationResult | null>(null);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
 
     const selectedDepartment = departments.find((d) => String(d.id) === departmentId);
     const sampleFile = selectedDepartment ? CSV_MAP[selectedDepartment.name] : null;
@@ -750,17 +725,19 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
     const loadInitialData = async () => {
         try {
             setLoading(true);
-            const [campaignRes, departmentRes, dispositionsRes] = await Promise.all([
+            const [campaignRes, departmentRes, dispositionsRes, countriesRes, industriesRes] = await Promise.all([
                 campaignService.getAllCampaigns(),
                 departmentService.getActiveDepartmentsList(),
                 SentinelBatchesService.getDispostionsData(),
+                SentinelBatchesService.getCountriesData(),
+                SentinelBatchesService.getIndustryData(),
             ]);
             setCampaigns(campaignRes || []);
-            const vvDispositionList =
-                (dispositionsRes?.data || []).map(
-                    (item: any) => item.call_disposition.toLowerCase()
-                );
-
+            const vvDispositionList = (dispositionsRes?.data || []).map(
+                (item: any) => item.call_disposition.toLowerCase()
+            );
+            setCountries(countriesRes || []);
+            setIndustries(industriesRes || []);
             setVvDispositions(vvDispositionList);
 
             const allDepartments = departmentRes || [];
@@ -821,8 +798,8 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
         setFile(null);
         setHeaderValidation(null);
         setRowValidation(null);
-        setCampaignId('');   // ✅ add this
-        setSegmentId('');    // ✅ add this
+        setCampaignId('');
+        setSegmentId('');
     }, [departmentId]);
 
     const processFile = async (selected: File) => {
@@ -840,7 +817,7 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
         try {
             setValidating(true);
 
-            const [sampleHeaders, { headers: uploadedHeaders, rows, rowCount }] = await Promise.all([
+            const [sampleHeaders, { headers: uploadedHeaders, originalHeaders, rows, rowCount }] = await Promise.all([
                 fetchSampleHeaders(sampleFile),
                 parseUploadedFile(selected),
             ]);
@@ -861,7 +838,7 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
             setHeaderValidation(hResult);
 
             if (hResult.valid) {
-                const rResult = validateRows(deptKey, uploadedHeaders, rows, vvDispositions);
+                const rResult = validateRows(deptKey, uploadedHeaders, originalHeaders, rows, countries, industries, vvDispositions);
                 setRowValidation(rResult);
 
                 if (rResult.invalidRows === 0) {
@@ -905,16 +882,19 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
     };
 
     const handleUpload = async () => {
-
         if (!headerValidation?.valid || !rowValidation || !rowValidation.canUpload || !file || !selectedDepartment) {
             return;
         }
+
         try {
             setLoading(true);
             const formData = new FormData();
-            // ✅ required for all
+
             formData.append('department', selectedDepartment.name);
-            // ✅ DataOps only
+            formData.append('total_rows', String(rowValidation.totalRows));
+            formData.append('valid_rows', String(rowValidation.validRows));
+            formData.append('invalid_rows', String(rowValidation.invalidRows));
+
             if (shouldShowCampaignFields) {
                 const selectedCampaign = campaigns.find((c) => String(c.id) === campaignId);
                 const selectedSegment = segments.find((s) => String(s.id) === segmentId);
@@ -926,8 +906,19 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
                 formData.append('segment_code', selectedSegment.segment_code);
                 formData.append('priority', priority);
             }
-            // ✅ file
-            formData.append('file', file);
+
+            // FIX: build a new CSV file from valid rows only instead of sending the original file
+            // This ensures invalid rows are never sent to the backend
+            const uploadFile = rowValidation.invalidRows > 0
+                ? buildValidRowsFile(
+                    rowValidation.validRowData.headers,
+                    rowValidation.validRowData.rows,
+                    file.name,
+                )
+                : file; // all rows valid — send original file as-is
+
+            formData.append('file', uploadFile);
+
             await SentinelBatchesService.uploadSentinelBatch(formData);
             toast.success('Batch uploaded successfully');
             onOpenChange(false);
@@ -937,9 +928,7 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
                 error?.response?.data?.message ||
                 'Upload failed'
             );
-
         } finally {
-
             setLoading(false);
         }
     };
@@ -949,6 +938,7 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
         downloadInvalidRowsCSV(
             rowValidation.invalidRowData.headers,
             rowValidation.invalidRowData.rows,
+            rowValidation.invalidRowData.reasons,
             file.name,
         );
     };
@@ -964,14 +954,13 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
         validating ||
         loading;
 
-    // ── Derived for header area ───────────────────────────────
     const showRowSummaryInHeader = headerValidation?.valid && rowValidation;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-6xl p-0 overflow-hidden max-h-[90vh] flex flex-col">
 
-                {/* ── HEADER — compact, with inline validation summary ── */}
+                {/* ── HEADER ── */}
                 <div className="px-6 py-4 border-b bg-lightprimary/30 dark:bg-white/5 shrink-0">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
                         <div>
@@ -979,7 +968,6 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
                             <p className="text-xs text-muted-foreground mt-0.5">Upload and configure batch processing details.</p>
                         </div>
 
-                        {/* Row validation summary — shown in header once available */}
                         {showRowSummaryInHeader && (
                             <div className="flex items-center gap-3 flex-wrap">
                                 <div className="flex items-center gap-1.5">
@@ -1000,7 +988,6 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
                         )}
                     </div>
 
-                    {/* Issue breakdown — shown in header */}
                     {showRowSummaryInHeader && rowValidation!.issues.length > 0 && (
                         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5">
                             {rowValidation!.issues.map((issue) => (
@@ -1024,22 +1011,17 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
                     )}
                 </div>
 
-                {/* ── BODY — scrollable ── */}
+                {/* ── BODY ── */}
                 <div className="px-6 py-5 space-y-5 overflow-y-auto flex-1">
 
                     {/* DataOps Only */}
                     {shouldShowCampaignFields && (
-
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-
-                            {/* Campaign */}
                             <div className="space-y-2">
                                 <Label>Campaign</Label>
                                 <AutoComplete
                                     value={campaignId}
-                                    onChange={(value) =>
-                                        setCampaignId(value)
-                                    }
+                                    onChange={(value) => setCampaignId(value)}
                                     placeholder="Select campaign"
                                     options={campaigns.map((c) => ({
                                         label: `${c.code} - ${c.campaign_name}`,
@@ -1048,7 +1030,6 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
                                 />
                             </div>
 
-                            {/* Segment */}
                             <div className="space-y-2">
                                 <Label>Campaign Segment</Label>
                                 <AutoComplete
@@ -1061,13 +1042,11 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
                                     }))}
                                     disabled={!campaignId}
                                 />
-
                             </div>
 
-                            {/* Priority */}
                             <div className="space-y-2">
                                 <Label>Priority</Label>
-                                <Select value={priority} onValueChange={setPriority} >
+                                <Select value={priority} onValueChange={setPriority}>
                                     <SelectTrigger className="w-full h-11">
                                         <SelectValue />
                                     </SelectTrigger>
@@ -1084,7 +1063,7 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="space-y-2">
                             <Label>Department</Label>
-                            <Select value={departmentId} onValueChange={setDepartmentId} disabled={disableDepartmentSelect} >
+                            <Select value={departmentId} onValueChange={setDepartmentId} disabled={disableDepartmentSelect}>
                                 <SelectTrigger className="w-full h-11">
                                     <SelectValue placeholder="Select department" />
                                 </SelectTrigger>
@@ -1125,7 +1104,6 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
                     <div className="space-y-3">
                         <Label>Upload File</Label>
 
-                        {/* Drop zone */}
                         <div
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
@@ -1261,4 +1239,4 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
     );
 };
 
-export default SentinelBatchUploadDialog;
+export default SentinelBatchUploadDialog
