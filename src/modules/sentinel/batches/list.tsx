@@ -31,14 +31,13 @@ const SentinelBatches = () => {
     const [total, setTotal] = useState(0);
 
     // ✅ search states
-    const [search, setSearch] = useState(searchParams.get("search") || "");
-    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [search, setSearch] = useState(searchParams.get("search")?.trim() || "");
+    const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get("search")?.trim() || "");
 
     // ✅ debounce
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearch(search);
-
             // reset page on search
             setPage(1);
         }, 500);
@@ -48,50 +47,31 @@ const SentinelBatches = () => {
 
     const loadCurrentDepartment = async () => {
         try {
-
             const profile = await userService.getProfile();
-
-            const departments =
-                await departmentService.getActiveDepartmentsList();
-
+            const departments = await departmentService.getActiveDepartmentsList();
             const matchedDepartment = departments.find(
                 (d) => d.id === profile.department_id
             );
-
-            setCurrentDepartment(
-                matchedDepartment?.name || ""
-            );
-
+            setCurrentDepartment(matchedDepartment?.name || "");
         } catch (error) {
-
-            console.error(
-                "Failed to load current department",
-                error
-            );
+            console.error("Failed to load current department", error);
         }
     };
 
     const loadData = async () => {
         try {
-
             setLoading(true);
-
-            const batchRes =
-                await SentinelBatchesService.getBatches(
-                    page,
-                    limit,
-                    debouncedSearch
-                );
-
+            const batchRes = await SentinelBatchesService.getBatches(page, limit, debouncedSearch);
             setBatches(batchRes.data || []);
-
             setTotal(batchRes.total || 0);
-
         } finally {
-
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        setSearch(searchParams.get("search")?.trim() || "");
+    }, [searchParams]);
 
     useEffect(() => {
         loadCurrentDepartment();
@@ -108,22 +88,12 @@ const SentinelBatches = () => {
 
     return (
         <>
-            <SlimBreadcrumb
-                title="Sentinel Segments"
-                items={BCrumb}
-            />
-
+            <SlimBreadcrumb title="Sentinel Segments" items={BCrumb} />
             <CardBox className="overflow-hidden">
 
                 {/* Search */}
-                {/* Top Actions */}
                 <div className="p-4 flex items-center justify-between gap-4">
-
-                    <SentinelBatchSearch
-                        value={search}
-                        onChange={setSearch}
-                    />
-
+                    <SentinelBatchSearch value={search}onChange={setSearch}/>
                     <Button variant="lightprimary" onClick={() => setUploadDialogOpen(true)}>
                         <Upload className="size-4" />
                         Upload
@@ -147,7 +117,7 @@ const SentinelBatches = () => {
                 />
 
             </CardBox>
-            <SentinelBatchUploadDialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}  currentDepartment={currentDepartment} />
+            <SentinelBatchUploadDialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen} currentDepartment={currentDepartment} />
         </>
     );
 };

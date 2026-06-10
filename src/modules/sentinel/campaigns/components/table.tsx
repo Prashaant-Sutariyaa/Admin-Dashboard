@@ -65,7 +65,7 @@ const stickyTitleBody: React.CSSProperties = { ...stickyTitle, zIndex: 20 };
 const SentinelCampaignsTable = ({ data, loading }: Props) => {
     const navigate = useNavigate();
     const handleNavigate = (campaign_code: string) => {
-        navigate(`/sentinel-segments?search=${campaign_code}`);
+        navigate(`/sentinel-segments?search=${encodeURIComponent(campaign_code.trim())}`);
     };
 
     return (

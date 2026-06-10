@@ -197,19 +197,19 @@ const SentinelBatchDetailsTable = ({ data, loading }: Props) => {
                                         {batch.quality_invalid}
                                     </GCell>
 
-                                    <GCell isFirst group="dbr" metric="total" department="DB Refresh" batchCode={batch.batch_code} >
+                                    <GCell isFirst group="dbr" metric="total" department="DBR" batchCode={batch.batch_code} >
                                         {batch.dbr_total}
                                     </GCell>
 
-                                    <GCell group="dbr" metric="pending" department="DB Refresh" batchCode={batch.batch_code} >
+                                    <GCell group="dbr" metric="pending" department="DBR" batchCode={batch.batch_code} >
                                         {batch.dbr_pending}
                                     </GCell>
 
-                                    <GCell group="dbr" metric="valid" department="DB Refresh" batchCode={batch.batch_code} >
+                                    <GCell group="dbr" metric="valid" department="DBR" batchCode={batch.batch_code} >
                                         {batch.dbr_valid}
                                     </GCell>
 
-                                    <GCell group="dbr" metric="invalid" department="DB Refresh" batchCode={batch.batch_code} >
+                                    <GCell group="dbr" metric="invalid" department="DBR" batchCode={batch.batch_code} >
                                         {batch.dbr_invalid}
                                     </GCell>
 
