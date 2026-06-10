@@ -1,4 +1,4 @@
-import userImg from '../../assets/images/profile/user-1.jpg';
+import userImg from '../../assets/images/profile/user-11.png';
 import supportImg from '../../assets/images/dashboard/customer-support-img.png';
 
 const Moderndash = () => {
@@ -10,7 +10,7 @@ const Moderndash = () => {
                     <div className="relative flex items-center justify-between bg-primary/10 rounded-lg p-6">
                         <div className="flex items-center gap-3">
                             <div>
-                                <img src={userImg} alt="user-img" width={50} height={50} className="rounded-full" />
+                                <img src={userImg} alt="user-img" width={70} height={70} className="rounded-full" />
                             </div>
                             <div className="flex flex-col gap-0.5">
                                 <h5 className="card-title">Welcome back! {name} 👋</h5>
