@@ -2,7 +2,7 @@ import { Icon } from '@iconify/react';
 import * as profileData from '../../../config/data';
 import SimpleBar from 'simplebar-react';
 import { Link } from 'react-router';
-import profileimg from 'src/assets/images/profile/user-1.jpg';
+import profileimg from 'src/assets/images/profile/user-11.png';
 import {
   DropdownMenu,
   DropdownMenuContent,
