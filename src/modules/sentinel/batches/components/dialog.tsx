@@ -1,13 +1,7 @@
 import { useEffect, useState, useRef } from "react";
-import {
-    Dialog, DialogContent,
-    DialogFooter,
-} from "src/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, } from "src/components/ui/dialog";
 import { Button } from "src/components/ui/button";
-import {
-    Select, SelectContent, SelectItem,
-    SelectTrigger, SelectValue,
-} from "src/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "src/components/ui/select";
 import AutoComplete from "src/components/ui/AutoComplete";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
@@ -83,8 +77,7 @@ interface RowValidationResult {
     originalHeaders: string[];
 }
 
-const normalizeKey = (...values: string[]) =>
-    values.map((v) => v.trim().toLowerCase()).join('__');
+const normalizeKey = (...values: string[]) => values.map((v) => v.trim().toLowerCase()).join('__');
 
 // ── Constants ─────────────────────────────────────────────────
 
@@ -245,8 +238,7 @@ const getSampleFileName = (url: string): string => {
     return parts[parts.length - 1].split('?')[0];
 };
 
-const isEmpty = (value: string): boolean =>
-    value === '' || value.trim() === '' || value.trim() === '-';
+const isEmpty = (value: string): boolean => value === '' || value.trim() === '' || value.trim() === '-';
 
 // FIX: only allow personal LinkedIn URLs (linkedin.com/in/...), not company URLs
 const isValidPersonalLinkedIn = (url: string): boolean =>
@@ -255,8 +247,7 @@ const isValidPersonalLinkedIn = (url: string): boolean =>
 const isValidCompanyLinkedIn = (url: string): boolean =>
     /^(https?:\/\/)?(www\.)?linkedin\.com\/(company|school)\/.+/i.test(url.trim());
 
-const cleanText = (text: string): string =>
-    text.replace(/^\uFEFF/, '').replace(/\r/g, '');
+const cleanText = (text: string): string => text.replace(/^\uFEFF/, '').replace(/\r/g, '');
 
 // ── CSV parser — handles quoted fields with embedded commas/newlines ──
 const parseCSVLine = (line: string): string[] => {
@@ -333,8 +324,13 @@ const validateHeaders = (sampleHeaders: string[], uploadedHeaders: string[]): He
 //   3. LinkedIn fix: empty mandatory LinkedIn field now flagged correctly
 //   4. validRowData returned for building the upload payload
 
-const validateRows = (deptKey: string, headers: string[], originalHeaders: string[], rows: string[][], countries: any[] = [], industries: any[] = [],
-
+const validateRows = (
+    deptKey: string,
+    headers: string[],
+    originalHeaders: string[],
+    rows: string[][],
+    countries: any[] = [],
+    // industries: any[] = [],
     vvDispositions: string[] = []): RowValidationResult => {
 
     const mandatoryHeaders = MANDATORY_HEADERS[deptKey] ?? [];
@@ -838,7 +834,9 @@ const SentinelBatchUploadDialog = ({ open, currentDepartment, onOpenChange }: Pr
             setHeaderValidation(hResult);
 
             if (hResult.valid) {
-                const rResult = validateRows(deptKey, uploadedHeaders, originalHeaders, rows, countries, industries, vvDispositions);
+                const rResult = validateRows(deptKey, uploadedHeaders, originalHeaders, rows, countries,
+                    // industries, 
+                    vvDispositions);
                 setRowValidation(rResult);
 
                 if (rResult.invalidRows === 0) {
