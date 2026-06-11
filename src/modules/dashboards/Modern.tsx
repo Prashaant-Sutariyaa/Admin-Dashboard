@@ -1,4 +1,4 @@
-import userImg from '../../assets/images/profile/user-11.png';
+import userImg from '../../assets/images/profile/user-1.jpg';
 import supportImg from '../../assets/images/dashboard/customer-support-img.png';
 
 const Moderndash = () => {
