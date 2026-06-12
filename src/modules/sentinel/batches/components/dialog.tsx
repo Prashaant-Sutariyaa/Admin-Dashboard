@@ -249,39 +249,65 @@ const isValidCompanyLinkedIn = (url: string): boolean =>
 
 const cleanText = (text: string): string => text.replace(/^\uFEFF/, '').replace(/\r/g, '');
 
+const cleanCellValue = (value: string): string => {
+    const cleaned = value
+        .replace(/^[\s\u0000-\u001F\u007F\u00A0\u200B-\u200D\uFEFF]+/, '')
+        .replace(/[\s\u0000-\u001F\u007F\u00A0\u200B-\u200D\uFEFF]+$/, '');
+
+    return cleaned === '-' ? '' : cleaned;
+};
+
 // ── CSV parser — handles quoted fields with embedded commas/newlines ──
-const parseCSVLine = (line: string): string[] => {
-    const result: string[] = [];
-    let current = '';
+const parseCSV = (text: string): string[][] => {
+    const rows: string[][] = [];
+
+    let row: string[] = [];
+    let cell = '';
     let insideQuotes = false;
 
-    for (let i = 0; i < line.length; i++) {
-        const char = line[i];
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
 
         if (char === '"') {
-            if (insideQuotes && line[i + 1] === '"') {
-                current += '"';
+            if (insideQuotes && text[i + 1] === '"') {
+                cell += '"';
                 i++;
             } else {
                 insideQuotes = !insideQuotes;
             }
-        } else if (char === ',' && !insideQuotes) {
-            result.push(current.trim());
-            current = '';
-        } else {
-            current += char;
+        }
+        else if (char === ',' && !insideQuotes) {
+            row.push(cleanCellValue(cell));
+            cell = '';
+        }
+        else if (char === '\n' && !insideQuotes) {
+            row.push(cleanCellValue(cell));
+
+            if (row.some(v => v !== '')) {
+                rows.push(row);
+            }
+
+            row = [];
+            cell = '';
+        }
+        else {
+            cell += char;
         }
     }
 
-    result.push(current.trim());
-    return result;
-};
+    row.push(cleanCellValue(cell));
 
+    if (row.some(v => v !== '')) {
+        rows.push(row);
+    }
+
+    return rows;
+};
 const fetchSampleHeaders = async (url: string): Promise<string[]> => {
     const res = await fetch(url);
     const text = cleanText(await res.text());
-    const firstLine = text.split('\n')[0];
-    return parseCSVLine(firstLine).map((h) => h.toLowerCase());
+    const parsed = parseCSV(text);
+    return (parsed[0] || []).map((h) => h.toLowerCase());
 };
 
 const parseUploadedFile = (
@@ -291,16 +317,21 @@ const parseUploadedFile = (
         const reader = new FileReader();
         reader.onload = (e) => {
             const text = cleanText(e.target?.result as string);
-            const lines = text.split('\n').filter((l) => l.trim() !== '');
-            if (lines.length === 0) return reject(new Error('Empty file'));
+            const parsedRows = parseCSV(text);
+            if (parsedRows.length === 0) {
+                return reject(new Error('Empty file'));
+            }
 
-            const originalHeaders = parseCSVLine(lines[0]);
-
+            const originalHeaders = parsedRows[0];
             const headers = originalHeaders.map((h) => h.toLowerCase());
+            const rows = parsedRows.slice(1);
 
-            const rows = lines.slice(1).map((line) => parseCSVLine(line));
-
-            resolve({ headers, originalHeaders, rows, rowCount: rows.length });
+            resolve({
+                headers,
+                originalHeaders,
+                rows,
+                rowCount: rows.length,
+            });
         };
         reader.onerror = () => reject(new Error('Failed to read file'));
         reader.readAsText(file);
