@@ -81,6 +81,15 @@ export const SentinelBatchesService = {
 
     return res.data;
   },
+  async exportSegmentData(segment_code: string, metric: string, department: string) {
+    const res = await apiClient.get('/sentinel/export/', {
+      params: { segment_code, metric, department },
+      responseType: 'blob',
+    }
+    );
+
+    return res.data;
+  },
 
   async getDispostionsData() {
     const res = await apiClient.get('/dispositions/');

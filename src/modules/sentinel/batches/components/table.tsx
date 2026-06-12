@@ -1,7 +1,8 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "src/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "src/components/ui/tooltip";
 
-import { SentinelBatch } from "../services/SentinelBatchesService";
+import { SentinelBatch, SentinelBatchesService } from "../services/SentinelBatchesService";
+import { Download } from "lucide-react";
 import { useNavigate } from "react-router";
 
 interface Props {
@@ -34,11 +35,6 @@ const SubHead = ({ label, isFirst = false, group }: { label: string; isFirst?: b
     </TableHead>
 );
 
-const GCell = ({ children, isFirst = false, group, className = "" }: { children: React.ReactNode; isFirst?: boolean; group: keyof typeof GROUP; className?: string }) => (
-    <TableCell className={`text-center border-b border-r ${GROUP[group].bodyBg} ${GROUP[group].border} ${isFirst ? `border-l-2 ${GROUP[group].border}` : ""} ${className}`}>
-        {children}
-    </TableCell>
-);
 
 // ✅ Sticky cell styles as inline — Tailwind z-* gets overridden by stacking context
 const stickySegment: React.CSSProperties = {
@@ -61,13 +57,89 @@ const stickyTitle: React.CSSProperties = {
 // Lower z for body rows so header rows always win
 const stickySegmentBody: React.CSSProperties = { ...stickySegment, zIndex: 20 };
 const stickyTitleBody: React.CSSProperties = { ...stickyTitle, zIndex: 20 };
-
 const SentinelBatchesTable = ({ data, loading }: Props) => {
     const navigate = useNavigate();
+    const downloadFile = async (
+        segmentCode: string,
+        metric: string,
+        department: string
+    ) => {
+        try {
+            const blob = await SentinelBatchesService.exportSegmentData(
+                segmentCode,
+                metric,
+                department
+            );
 
+            const url = window.URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `${segmentCode}_${department}_${metric}.csv`;
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Download failed:", error);
+        }
+    };
     const handleNavigate = (segmentCode: string) => {
         navigate(`/sentinel-segments/segment-details/${segmentCode}`);
     }
+    const GCell = ({
+        children,
+        isFirst = false,
+        group,
+        className = "",
+        metric,
+        department,
+        segmentCode,
+    }: {
+        children: React.ReactNode;
+        isFirst?: boolean;
+        group: keyof typeof GROUP;
+        className?: string;
+        metric: string;
+        department: string;
+        segmentCode: string;
+    }) => {
+        const hasValue = Number(children) > 0;
+
+        return (
+            <TableCell
+                className={`text-center border-b border-r p-0 ${GROUP[group].bodyBg} ${GROUP[group].border} ${isFirst ? `border-l-2 ${GROUP[group].border}` : ""
+                    } ${className}`}
+            >
+                {hasValue ? (
+                    <button
+                        type="button"
+                        onClick={() =>
+                            downloadFile(segmentCode, metric, department)
+                        }
+                        className="w-full min-h-10 flex items-center justify-center group/btn"
+                    >
+                        <span className="text-sm font-medium tabular-nums transition-all duration-200 ease-out group-hover/btn:opacity-0 group-hover/btn:scale-75">
+                            {children}
+                        </span>
+
+                        <Download
+                            size={14}
+                            strokeWidth={1.75}
+                            className={`absolute opacity-0 scale-75 transition-all duration-200 ease-out group-hover/btn:opacity-100 group-hover/btn:scale-100 ${GROUP[group].text}`}
+                        />
+                    </button>
+                ) : (
+                    <span className="flex items-center justify-center min-h-10 text-sm font-medium">
+                        {children}
+                    </span>
+                )}
+            </TableCell>
+        );
+    };
+
 
     return (
 
@@ -161,37 +233,37 @@ const SentinelBatchesTable = ({ data, loading }: Props) => {
                                         )}
                                     </TableCell>
 
-                                    <GCell isFirst group="dataops">{batch.dataops_total}</GCell>
-                                    <GCell group="dataops">{batch.dataops_valid}</GCell>
-                                    <GCell group="dataops">{batch.dataops_invalid}</GCell>
+                                    <GCell isFirst group="dataops" metric="total" department="DataOps" segmentCode={batch.segment_code}>{batch.dataops_total}</GCell>
+                                    <GCell group="dataops" metric="valid" department="DataOps" segmentCode={batch.segment_code}>{batch.dataops_valid}</GCell>
+                                    <GCell group="dataops" metric="invalid" department="DataOps" segmentCode={batch.segment_code}>{batch.dataops_invalid}</GCell>
 
-                                    <GCell isFirst group="email">{batch.email_total}</GCell>
-                                    <GCell group="email">{batch.email_pending}</GCell>
-                                    <GCell group="email">{batch.email_valid}</GCell>
-                                    <GCell group="email">{batch.email_invalid}</GCell>
+                                    <GCell isFirst group="email" metric="total" department="Email" segmentCode={batch.segment_code}>{batch.email_total}</GCell>
+                                    <GCell group="email" metric="pending" department="Email" segmentCode={batch.segment_code}>{batch.email_pending}</GCell>
+                                    <GCell group="email" metric="valid" department="Email" segmentCode={batch.segment_code}>{batch.email_valid}</GCell>
+                                    <GCell group="email" metric="invalid" department="Email" segmentCode={batch.segment_code}>{batch.email_invalid}</GCell>
 
-                                    <GCell isFirst group="quality">{batch.quality_total}</GCell>
-                                    <GCell group="quality">{batch.quality_pending}</GCell>
-                                    <GCell group="quality">{batch.quality_valid}</GCell>
-                                    <GCell group="quality">{batch.quality_invalid}</GCell>
+                                    <GCell isFirst group="quality" metric="total" department="Quality" segmentCode={batch.segment_code}>{batch.quality_total}</GCell>
+                                    <GCell group="quality" metric="pending" department="Quality" segmentCode={batch.segment_code}>{batch.quality_pending}</GCell>
+                                    <GCell group="quality" metric="valid" department="Quality" segmentCode={batch.segment_code}>{batch.quality_valid}</GCell>
+                                    <GCell group="quality" metric="invalid" department="Quality" segmentCode={batch.segment_code}>{batch.quality_invalid}</GCell>
 
-                                    <GCell isFirst group="dbr">{batch.dbr_total}</GCell>
-                                    <GCell group="dbr">{batch.dbr_pending}</GCell>
-                                    <GCell group="dbr">{batch.dbr_valid}</GCell>
-                                    <GCell group="dbr">{batch.dbr_invalid}</GCell>
+                                    <GCell isFirst group="dbr" metric="total" department="DBR" segmentCode={batch.segment_code}>{batch.dbr_total}</GCell>
+                                    <GCell group="dbr" metric="pending" department="DBR" segmentCode={batch.segment_code}>{batch.dbr_pending}</GCell>
+                                    <GCell group="dbr" metric="valid" department="DBR" segmentCode={batch.segment_code}>{batch.dbr_valid}</GCell>
+                                    <GCell group="dbr" metric="invalid" department="DBR" segmentCode={batch.segment_code}>{batch.dbr_invalid}</GCell>
 
-                                    <GCell isFirst group="vv">{batch.vv_total}</GCell>
-                                    <GCell group="vv">{batch.vv_pending}</GCell>
-                                    <GCell group="vv">{batch.vv_valid}</GCell>
-                                    <GCell group="vv">{batch.vv_invalid}</GCell>
+                                    <GCell isFirst group="vv" metric="total" department="VV" segmentCode={batch.segment_code}>{batch.vv_total}</GCell>
+                                    <GCell group="vv" metric="pending" department="VV" segmentCode={batch.segment_code}>{batch.vv_pending}</GCell>
+                                    <GCell group="vv" metric="valid" department="VV" segmentCode={batch.segment_code}>{batch.vv_valid}</GCell>
+                                    <GCell group="vv" metric="invalid" department="VV" segmentCode={batch.segment_code}>{batch.vv_invalid}</GCell>
 
-                                    <GCell isFirst group="mis">{batch.mis_total}</GCell>
-                                    <GCell group="mis">{batch.mis_pending}</GCell>
-                                    <GCell group="mis">{batch.mis_delivered}</GCell>
-                                    <GCell group="mis">{batch.mis_accepted}</GCell>
-                                    <GCell group="mis">{batch.mis_client_rejected}</GCell>
-                                    <GCell group="mis">{batch.mis_rtd}</GCell>
-                                    <GCell group="mis">{batch.mis_internal_rejected}</GCell>
+                                    <GCell isFirst group="mis" metric="total" department="MIS" segmentCode={batch.segment_code}>{batch.mis_total}</GCell>
+                                    <GCell group="mis" metric="pending" department="MIS" segmentCode={batch.segment_code}>{batch.mis_pending}</GCell>
+                                    <GCell group="mis" metric="delivered" department="MIS" segmentCode={batch.segment_code}>{batch.mis_delivered}</GCell>
+                                    <GCell group="mis" metric="accepted" department="MIS" segmentCode={batch.segment_code}>{batch.mis_accepted}</GCell>
+                                    <GCell group="mis" metric="client_rejected" department="MIS" segmentCode={batch.segment_code}>{batch.mis_client_rejected}</GCell>
+                                    <GCell group="mis" metric="rtd" department="MIS" segmentCode={batch.segment_code}>{batch.mis_rtd}</GCell>
+                                    <GCell group="mis" metric="internal_rejected" department="MIS" segmentCode={batch.segment_code}>{batch.mis_internal_rejected}</GCell>
 
                                 </TableRow>
                             ))}

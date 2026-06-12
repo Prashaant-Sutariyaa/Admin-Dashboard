@@ -60,4 +60,14 @@ export const SentinelCampaignService = {
     return res.data;
   },
 
+    async exportCampaignData(campaign_code: string, metric: string, department: string) {
+    const res = await apiClient.get('/sentinel/export/', {
+      params: { campaign_code, metric, department },
+      responseType: 'blob',
+    }
+    );
+
+    return res.data;
+  },
+
 };
